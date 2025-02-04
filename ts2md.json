@@ -1,0 +1,9 @@
+{
+  "options": [
+    {
+      "inputFilename": "src/index.ts",
+      "outputFilename": "docs/examples.md",
+      "firstHeadingLevel": 1
+    }
+  ]
+}
