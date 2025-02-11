@@ -1,7 +1,10 @@
-import { Beef, PrivateKey, PublicKey, SignActionArgs } from '@bsv/sdk'
 import {
-  randomBytesBase64,
-  ScriptTemplateBRC29,
+  Beef,
+  SignActionArgs,
+  PushDrop,
+  WalletProtocol
+} from '@bsv/sdk'
+import {
   Setup,
   SetupWallet
 } from '@bsv/wallet-toolbox'
@@ -20,7 +23,7 @@ import {
  *
  * @publicbody
  */
-export async function transferBRC29() {
+export async function transferPushDrop() {
   // obtain the secrets environment for the testnet network.
   const env = Setup.getEnv('test')
   // setup1 will be the sending wallet using the rootKey associated with identityKey, which is the default.
@@ -32,14 +35,14 @@ export async function transferBRC29() {
   })
 
   // create a new transaction with an output for setup2 in the amount of 42 satoshis.
-  const o = await outputBRC29(setup1, setup2.identityKey, 42)
+  const o = await outputPushDrop(setup1, setup2.identityKey, 42)
 
   // use setup2 to consume the new output to demonstrate unlocking the output and adding it to the wallet's "change" outputs.
-  await inputBRC29(setup2, o)
+  await inputPushDrop(setup2, o)
 }
 
 /**
- * Create a new BRC29 output.
+ * Create a new PushDrop output.
  *
  * Convert the destination identity key into its associated address and use that to generate a locking script.
  *
@@ -49,7 +52,7 @@ export async function transferBRC29() {
  * Typically, at least one "change" input will be automatically added to fund the transaction,
  * and at least one output will be added to recapture excess funding.
  *
- * @param {SetupWallet} setup The setup context which will create the new transaction containing the new BRC29 output.
+ * @param {SetupWallet} setup The setup context which will create the new transaction containing the new PushDrop output.
  * @param {string} toIdentityKey The public key which will be able to unlock the output.
  * Note that the output uses the "address" associated with this public key: The HASH160 of the public key.
  * @param {number} satoshis How many satoshis to transfer to this new output.
@@ -58,12 +61,12 @@ export async function transferBRC29() {
  * @returns {string} outpoint - The txid and index of the outpoint in the format `${txid}.${index}`.
  * @returns {string} fromIdentityKey - The public key that locked the output.
  * @returns {number} satoshis - The amount assigned to the output.
- * @returns {string} derivationPrefix - The BRC29 prefix string.
- * @returns {string} derivationSuffix - The BRC29 suffix string.
+ * @returns {string} derivationPrefix - The PushDrop prefix string.
+ * @returns {string} derivationSuffix - The PushDrop suffix string.
  *
  * @publicbody
  */
-export async function outputBRC29(
+export async function outputPushDrop(
   setup: SetupWallet,
   toIdentityKey: string,
   satoshis: number
@@ -72,21 +75,20 @@ export async function outputBRC29(
   outpoint: string
   fromIdentityKey: string
   satoshis: number
-  derivationPrefix: string
-  derivationSuffix: string
+  protocol: WalletProtocol
+  keyId: string
 }> {
-  const derivationPrefix = randomBytesBase64(8)
-  const derivationSuffix = randomBytesBase64(8)
-  const { keyDeriver } = setup
 
-  const t = new ScriptTemplateBRC29({
-    derivationPrefix,
-    derivationSuffix,
-    keyDeriver
-  })
+  const t = new PushDrop(setup.wallet)
+
+  const protocol: WalletProtocol = [2, 'pushdropexample']
+  const keyId: string = '7'
+
+  const lock = await t.lock([[1,2,3], [4,5,6]], protocol, keyId, toIdentityKey, false, true, 'before')
+  const lockingScript = lock.toHex()
 
   // Use this label the new transaction can be found by `listActions` and as a "description" value.
-  const label = 'outputBRC29'
+  const label = 'outputPushDrop'
 
   // This call to `createAction` will create a new funded transaction containing the new output,
   // as well as sign and broadcast the transaction to the network.
@@ -97,14 +99,15 @@ export async function outputBRC29(
       // Typically, at least one "change" input will automatically be added to fund the transaction,
       // and at least one output will be added to recapture excess funding.
       {
-        lockingScript: t.lock(setup.rootKey.toString(), toIdentityKey).toHex(),
+        lockingScript,
         satoshis,
         outputDescription: label,
         tags: ['relinquish'],
         customInstructions: JSON.stringify({
-          derivationPrefix,
-          derivationSuffix,
-          type: 'BRC29'
+          protocol,
+          keyId,
+          counterparty: toIdentityKey,
+          type: 'PushDrop'
         })
       }
     ],
@@ -129,9 +132,7 @@ export async function outputBRC29(
   const outpoint = `${car.txid!}.0`
 
   console.log(`
-outputBRC29 to ${toIdentityKey}
-derivationPrefix ${derivationPrefix}
-derivationSuffix ${derivationSuffix}
+outputPushDrop to ${toIdentityKey}
 outpoint ${outpoint}
 satoshis ${satoshis}
 BEEF
@@ -145,15 +146,15 @@ ${beef.toLogString()}
     outpoint,
     fromIdentityKey: setup.identityKey,
     satoshis,
-    derivationPrefix,
-    derivationSuffix
+    protocol,
+    keyId
   }
 }
 
 /**
- * Consume a BRC29 output.
+ * Consume a PushDrop output.
  *
- * To spend a BRC29 output a transaction input must be created and signed using the
+ * To spend a PushDrop output a transaction input must be created and signed using the
  * associated private key.
  *
  * In this example, an initial `createAction` call constructs the overall shape of a
@@ -171,48 +172,44 @@ ${beef.toLogString()}
  *
  * Once signed, capture the input's now valid `unlockingScript` value and convert it to a hex string.
  *
- * @param {SetupWallet} setup The setup context which will consume a BRC29 output as an input to a new transaction transfering
+ * @param {SetupWallet} setup The setup context which will consume a PushDrop output as an input to a new transaction transfering
  * the output's satoshis to the "change" managed by the context's wallet.
- * @param {Beef} outputBRC29.beef - An object proving the validity of the new output where the last transaction contains the new output.
- * @param {string} outputBRC29.outpoint - The txid and index of the outpoint in the format `${txid}.${index}`.
- * @param {string} outputBRC29.fromIdentityKey - The public key that locked the output.
- * @param {number} outputBRC29.satoshis - The amount assigned to the output.
+ * @param {Beef} outputPushDrop.beef - An object proving the validity of the new output where the last transaction contains the new output.
+ * @param {string} outputPushDrop.outpoint - The txid and index of the outpoint in the format `${txid}.${index}`.
+ * @param {string} outputPushDrop.fromIdentityKey - The public key that locked the output.
+ * @param {number} outputPushDrop.satoshis - The amount assigned to the output.
  *
  * @publicbody
  */
-export async function inputBRC29(
+export async function inputPushDrop(
   setup: SetupWallet,
-  outputBRC29: {
+  outputPushDrop: {
     beef: Beef
     outpoint: string
     fromIdentityKey: string
     satoshis: number
-    derivationPrefix: string
-    derivationSuffix: string
+    protocol: WalletProtocol
+    keyId: string
   }
 ) {
   const {
-    derivationPrefix,
-    derivationSuffix,
+    protocol,
+    keyId,
     fromIdentityKey,
     satoshis,
     beef: inputBeef,
     outpoint
-  } = outputBRC29
+  } = outputPushDrop
 
   const { keyDeriver } = setup
 
-  const t = new ScriptTemplateBRC29({
-    derivationPrefix,
-    derivationSuffix,
-    keyDeriver
-  })
+  const t = new PushDrop(setup.wallet)
 
   // Construct an "unlock" object which is then associated with the input to be signed
   // such that when the "sign" method is called, a signed "unlockingScript" is computed for that input.
-  const unlock = t.unlock(setup.rootKey.toString(), fromIdentityKey, satoshis)
+  const unlock = t.unlock(protocol, keyId, fromIdentityKey, "single", false, satoshis)
 
-  const label = 'inputBRC29'
+  const label = 'inputPushDrop'
 
   /**
    * Creating an action with an input that requires it's own signing template is a two step process.
@@ -230,10 +227,10 @@ export async function inputBRC29(
     inputs: [
       {
         outpoint,
-        // The value of 108 is a constant for the BRC29 template.
+        // The value of 73 is a constant for the PushDrop template.
         // You could use the `unlock.estimateLength` method to obtain it.
-        // Or a quick look at the P2PKH source code to confirm it.
-        unlockingScriptLength: t.unlockLength,
+        // Or a quick look at the PushDrop source code to confirm it.
+        unlockingScriptLength: 73,
         inputDescription: label
       }
     ],
@@ -299,4 +296,4 @@ ${beef.toLogString()}
   }
 }
 
-transferBRC29().catch(console.error)
+transferPushDrop().catch(console.error)

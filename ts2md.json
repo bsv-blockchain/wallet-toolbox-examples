@@ -1,6 +1,12 @@
 {
   "options": [
     {
+      "inputFilename": "src/index.misc.ts",
+      "outputFilename": "docs/README.md",
+      "firstHeadingLevel": 2,
+      "noDetailsSummary": true
+    },
+    {
       "inputFilename": "src/index.ts",
       "outputFilename": "docs/p2pkh.md",
       "firstHeadingLevel": 2,
@@ -8,9 +14,17 @@
       "noDetailsSummary": true
     },
     {
-      "inputFilename": "src/index.misc.ts",
-      "outputFilename": "docs/README.md",
+      "inputFilename": "src/index.ts",
+      "outputFilename": "docs/brc29.md",
       "firstHeadingLevel": 2,
+      "filenameSubString": "src/brc29",
+      "noDetailsSummary": true
+    },
+    {
+      "inputFilename": "src/index.ts",
+      "outputFilename": "docs/pushdrop.md",
+      "firstHeadingLevel": 2,
+      "filenameSubString": "src/pushdrop",
       "noDetailsSummary": true
     }
   ]

@@ -4,7 +4,10 @@ The examples documentation is split into various pages, common bits are describe
 
 - [makeEnv](#function-makeenv) — Create a '.env' file with secrets to support experimentation.
 - [balances](#function-balances) — Sum available change outputs to display wallet balances.
+- [backup](#function-backup) — Add and use a backup storage provider.
 - [P2PKH Script Template](./p2pkh.md) — Create and consume P2PKH outputs.
+- [BRC29 Script Template](./brc29.md) — Create and consume BRC29 outputs.
+- [PushDrop Script Template](./pushdrop.md) — Create and consume PushDrop outputs.
 
 ## Getting Started
 
@@ -37,6 +40,8 @@ Links: [API](#api), [Functions](#functions)
 
 | |
 | --- |
+| [backup](#function-backup) |
+| [backup2](#function-backup2) |
 | [balances](#function-balances) |
 | [makeEnv](#function-makeenv) |
 
@@ -44,6 +49,51 @@ Links: [API](#api), [Functions](#functions)
 
 ---
 
+##### Function: backup
+
+```ts
+export async function backup(): Promise<void> {
+    const env = Setup.getEnv("test");
+    const setup = await Setup.createWalletClient({ env });
+    const { activeStorage: backup } = await Setup.createWalletSQLite({
+        env,
+        filePath: "myBackup.sqlite",
+        databaseName: "myBackup"
+    });
+    await setup.storage.addWalletStorageProvider(backup);
+    await setup.storage.updateBackups();
+    await backup.destroy();
+}
+```
+
+Links: [API](#api), [Functions](#functions)
+
+---
+##### Function: backup2
+
+```ts
+export async function backup2(): Promise<void> {
+    const env = Setup.getEnv("test");
+    const setup = await Setup.createWalletClient({
+        env,
+        rootKeyHex: env.devKeys[env.identityKey2]
+    });
+    const { activeStorage: backup } = await Setup.createWalletSQLite({
+        env,
+        filePath: "myBackup2.sqlite",
+        databaseName: "myBackup2"
+    });
+    await setup.storage.addWalletStorageProvider(backup);
+    await setup.storage.updateBackups();
+    await backup.destroy();
+}
+```
+
+See also: [backup](./README.md#function-backup)
+
+Links: [API](#api), [Functions](#functions)
+
+---
 ##### Function: balances
 
 The `balance` function demonstrates creating a `ServerClient` based wallet and
