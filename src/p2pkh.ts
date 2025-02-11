@@ -4,16 +4,16 @@ import { Setup, SetupWallet } from '@bsv/wallet-toolbox'
 /**
  * Example of moving satoshis from one wallet to another using the P2PKH template
  * to send directly to the "address" associated with a private key.
- * 
+ *
  * This example can be run by the following command:
- * 
+ *
  * ```bash
  * npx tsx p2pkh.ts
  * ```
  *
  * Combine this with the [balances](./README.md#function-balances) example to observe satoshis being transfered between
  * two wallets.
- * 
+ *
  * @publicbody
  */
 export async function transferP2PKH() {
@@ -40,7 +40,7 @@ export async function transferP2PKH() {
  * Convert the destination identity key into its associated address and use that to generate a locking script.
  *
  * Explicitly specify the new output to be created as part of a new action (transaction).
- * 
+ *
  * When outputs are explictly added to an action they must be funded:
  * Typically, at least one "change" input will be automatically added to fund the transaction,
  * and at least one output will be added to recapture excess funding.
@@ -125,24 +125,24 @@ ${beef.toLogString()}
 /**
  * Consume a P2PKH output.
  *
-* To spend a P2PKH output a transaction input must be created and signed using the
-* associated private key.
-* 
-* In this example, an initial `createAction` call constructs the overall shape of a
-* new transaction, returning a `signableTransaction`.
-*
-* The `tx` property of the `signableTransaction` should be parsed using
-* the standard `Beef` class. Note that it is not an ordinary AtomicBEEF for the
-* simple reason that the transaction has not yet been fully signed.
-*
-* You can either use the method shown here to obtain a signable `Transaction` object
-* from this beef or you can use the `Transaction.fromAtomicBEEF` method.
-*
-* To sign an input, set the corresponding input's `unlockingScriptTemplate` to an appropriately
-* initialized unlock object and call the `Transaction` `sign` method.
-*
-* Once signed, capture the input's now valid `unlockingScript` value and convert it to a hex string.
-* 
+ * To spend a P2PKH output a transaction input must be created and signed using the
+ * associated private key.
+ *
+ * In this example, an initial `createAction` call constructs the overall shape of a
+ * new transaction, returning a `signableTransaction`.
+ *
+ * The `tx` property of the `signableTransaction` should be parsed using
+ * the standard `Beef` class. Note that it is not an ordinary AtomicBEEF for the
+ * simple reason that the transaction has not yet been fully signed.
+ *
+ * You can either use the method shown here to obtain a signable `Transaction` object
+ * from this beef or you can use the `Transaction.fromAtomicBEEF` method.
+ *
+ * To sign an input, set the corresponding input's `unlockingScriptTemplate` to an appropriately
+ * initialized unlock object and call the `Transaction` `sign` method.
+ *
+ * Once signed, capture the input's now valid `unlockingScript` value and convert it to a hex string.
+ *
  * @param {SetupWallet} setup The setup context which will consume a P2PKH output as an input to a new transaction transfering
  * the output's satoshis to the "change" managed by the context's wallet.
  * @param {Beef} outputP2PKH.beef - An object proving the validity of the new output where the last transaction contains the new output.

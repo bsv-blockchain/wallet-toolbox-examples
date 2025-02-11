@@ -8,21 +8,19 @@ import { Setup } from '@bsv/wallet-toolbox'
  * and receives new outputs generated to recapture excess funding.
  *
  * Run this function using the following command:
- * 
+ *
  * ```bash
  * npx tsx balances.ts
  * ```
- * 
+ *
  * @publicbody
  */
 export async function balances(): Promise<void> {
-
   // Read the "secrets" from the .env file created by `makeEnv`
   const env = Setup.getEnv('test')
 
   // Compute the balance for both wallets: identityKey and identityKey2
   for (const identityKey of [env.identityKey, env.identityKey2]) {
-
     // Create a setup context (which includes a wallet).
     // This wallet will be a client of the default cloud storage provider.
     const setup = await Setup.createWalletClient({
