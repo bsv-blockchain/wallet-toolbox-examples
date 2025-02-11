@@ -2,7 +2,14 @@
   "options": [
     {
       "inputFilename": "src/index.ts",
-      "outputFilename": "docs/examples.md",
+      "outputFilename": "docs/p2pkh.md",
+      "firstHeadingLevel": 2,
+      "filenameSubString": "src/p2pkh",
+      "noDetailsSummary": true
+    },
+    {
+      "inputFilename": "src/index.misc.ts",
+      "outputFilename": "docs/README.md",
       "firstHeadingLevel": 2,
       "noDetailsSummary": true
     }

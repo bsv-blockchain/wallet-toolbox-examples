@@ -1,14 +1,13 @@
 import { Beef, PrivateKey, PublicKey, SignActionArgs } from '@bsv/sdk'
-import { Setup, SetupWallet } from '@bsv/wallet-toolbox'
+import { randomBytesBase64, ScriptTemplateBRC29, Setup, SetupWallet } from '@bsv/wallet-toolbox'
 
 /**
- * Example of moving satoshis from one wallet to another using the P2PKH template
- * to send directly to the "address" associated with a private key.
+ * Example of moving satoshis from one wallet to another using the BRC29 script template.
  * 
  * This example can be run by the following command:
  * 
  * ```bash
- * npx tsx p2pkh.ts
+ * npx tsx brc29.ts
  * ```
  *
  * Combine this with the [balances](./README.md#function-balances) example to observe satoshis being transfered between
@@ -16,7 +15,7 @@ import { Setup, SetupWallet } from '@bsv/wallet-toolbox'
  * 
  * @publicbody
  */
-export async function transferP2PKH() {
+export async function transferBRC29() {
   // obtain the secrets environment for the testnet network.
   const env = Setup.getEnv('test')
   // setup1 will be the sending wallet using the rootKey associated with identityKey, which is the default.
@@ -28,14 +27,14 @@ export async function transferP2PKH() {
   })
 
   // create a new transaction with an output for setup2 in the amount of 42 satoshis.
-  const o = await outputP2PKH(setup1, setup2.identityKey, 42)
+  const o = await outputBRC29(setup1, setup2.identityKey, 42)
 
   // use setup2 to consume the new output to demonstrate unlocking the output and adding it to the wallet's "change" outputs.
-  await inputP2PKH(setup2, o)
+  await inputBRC29(setup2, o)
 }
 
 /**
- * Create a new P2PKH output.
+ * Create a new BRC29 output.
  *
  * Convert the destination identity key into its associated address and use that to generate a locking script.
  *
@@ -45,7 +44,7 @@ export async function transferP2PKH() {
  * Typically, at least one "change" input will be automatically added to fund the transaction,
  * and at least one output will be added to recapture excess funding.
  *
- * @param {SetupWallet} setup The setup context which will create the new transaction containing the new P2PKH output.
+ * @param {SetupWallet} setup The setup context which will create the new transaction containing the new BRC29 output.
  * @param {string} toIdentityKey The public key which will be able to unlock the output.
  * Note that the output uses the "address" associated with this public key: The HASH160 of the public key.
  * @param {number} satoshis How many satoshis to transfer to this new output.
@@ -57,7 +56,7 @@ export async function transferP2PKH() {
  *
  * @publicbody
  */
-export async function outputP2PKH(
+export async function outputBRC29(
   setup: SetupWallet,
   toIdentityKey: string,
   satoshis: number
@@ -67,12 +66,14 @@ export async function outputP2PKH(
   toIdentityKey: string
   satoshis: number
 }> {
-  // Convert the destination identity key into its associated address and use that to generate a locking script.
-  const address = PublicKey.fromString(toIdentityKey).toAddress()
-  const lock = Setup.getLockP2PKH(address)
+  const t = new ScriptTemplateBRC29({
+    derivationPrefix: randomBytesBase64(8),
+    derivationSuffix: randomBytesBase64(8),
+    keyDeriver: setup.wallet.keyDeriver
+  })
 
   // Use this label the new transaction can be found by `listActions` and as a "description" value.
-  const label = 'outputP2PKH'
+  const label = 'outputBRC29'
 
   // This call to `createAction` will create a new funded transaction containing the new output,
   // as well as sign and broadcast the transaction to the network.
@@ -83,7 +84,7 @@ export async function outputP2PKH(
       // Typically, at least one "change" input will automatically be added to fund the transaction,
       // and at least one output will be added to recapture excess funding.
       {
-        lockingScript: lock.toHex(),
+        lockingScript: t.lock(setup.rootKey.toString(), toIdentityKey).toHex(),
         satoshis,
         outputDescription: label,
         tags: ['relinquish']
@@ -110,7 +111,7 @@ export async function outputP2PKH(
   const outpoint = `${car.txid!}.0`
 
   console.log(`
-outputP2PKH to ${toIdentityKey}
+outputBRC29 to ${toIdentityKey}
 outpoint ${outpoint}
 satoshis ${satoshis}
 BEEF
@@ -123,9 +124,9 @@ ${beef.toLogString()}
 }
 
 /**
- * Consume a P2PKH output.
+ * Consume a BRC29 output.
  *
-* To spend a P2PKH output a transaction input must be created and signed using the
+* To spend a BRC29 output a transaction input must be created and signed using the
 * associated private key.
 * 
 * In this example, an initial `createAction` call constructs the overall shape of a
@@ -143,25 +144,25 @@ ${beef.toLogString()}
 *
 * Once signed, capture the input's now valid `unlockingScript` value and convert it to a hex string.
 * 
- * @param {SetupWallet} setup The setup context which will consume a P2PKH output as an input to a new transaction transfering
+ * @param {SetupWallet} setup The setup context which will consume a BRC29 output as an input to a new transaction transfering
  * the output's satoshis to the "change" managed by the context's wallet.
- * @param {Beef} outputP2PKH.beef - An object proving the validity of the new output where the last transaction contains the new output.
- * @param {string} outputP2PKH.outpoint - The txid and index of the outpoint in the format `${txid}.${index}`.
- * @param {string} outputP2PKH.toIdentityKey - The public key able to unlock the output.
- * @param {number} outputP2PKH.satoshis - The amount assigned to the output.
+ * @param {Beef} outputBRC29.beef - An object proving the validity of the new output where the last transaction contains the new output.
+ * @param {string} outputBRC29.outpoint - The txid and index of the outpoint in the format `${txid}.${index}`.
+ * @param {string} outputBRC29.toIdentityKey - The public key able to unlock the output.
+ * @param {number} outputBRC29.satoshis - The amount assigned to the output.
  *
  * @publicbody
  */
-export async function inputP2PKH(
+export async function inputBRC29(
   setup: SetupWallet,
-  outputP2PKH: {
+  outputBRC29: {
     beef: Beef
     outpoint: string
     toIdentityKey: string
     satoshis: number
   }
 ) {
-  const o = outputP2PKH
+  const o = outputBRC29
   const env = Setup.getEnv(setup.chain)
 
   // Lookup the private key corresponding to the "toIdentityKey" associated with the new output.
@@ -173,7 +174,7 @@ export async function inputP2PKH(
   // such that when the "sign" method is called, a signed "unlockingScript" is computed for that input.
   const unlock = Setup.getUnlockP2PKH(privateKey, o.satoshis)
 
-  const label = 'inputP2PKH'
+  const label = 'inputBRC29'
 
   /**
    * Creating an action with an input that requires it's own signing template is a two step process.
@@ -191,7 +192,7 @@ export async function inputP2PKH(
     inputs: [
       {
         outpoint: o.outpoint,
-        // The value of 108 is a constant for the P2PKH template.
+        // The value of 108 is a constant for the BRC29 template.
         // You could use the `unlock.estimateLength` method to obtain it.
         // Or a quick look at the P2PKH source code to confirm it.
         unlockingScriptLength: 108,
@@ -259,4 +260,4 @@ ${beef.toLogString()}
   }
 }
 
-transferP2PKH().catch(console.error)
+transferBRC29().catch(console.error)

@@ -7,5 +7,23 @@ import { Setup } from '@bsv/wallet-toolbox'
  *
  * After running the function, copy or capture the output into a file named `.env`
  * in the `src` folder of this repository.
+ * 
+ * Note that you can replace or add to the auto-generated keys.
+ * 
+ * The following command will run the function,
+ * capture the output into a file named '.env',
+ * and display the file's contents:
+ * 
+ * ```bash
+ * npx tsx makeEnv.ts > .env; cat .env
+ * ```
+ * 
+ * @publicbody
  */
-Setup.makeEnv()
+export function makeEnv() {
+
+    Setup.makeEnv()
+
+}
+
+makeEnv()
