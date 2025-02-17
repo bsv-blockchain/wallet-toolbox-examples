@@ -1,13 +1,5 @@
-import {
-  Beef,
-  SignActionArgs,
-  PushDrop,
-  WalletProtocol
-} from '@bsv/sdk'
-import {
-  Setup,
-  SetupWallet
-} from '@bsv/wallet-toolbox'
+import { Beef, SignActionArgs, PushDrop, WalletProtocol } from '@bsv/sdk'
+import { Setup, SetupWallet } from '@bsv/wallet-toolbox'
 
 /**
  * Example of moving satoshis from one wallet to another using the BRC29 script template.
@@ -78,13 +70,23 @@ export async function outputPushDrop(
   protocol: WalletProtocol
   keyId: string
 }> {
-
   const t = new PushDrop(setup.wallet)
 
   const protocol: WalletProtocol = [2, 'pushdropexample']
   const keyId: string = '7'
 
-  const lock = await t.lock([[1,2,3], [4,5,6]], protocol, keyId, toIdentityKey, false, true, 'before')
+  const lock = await t.lock(
+    [
+      [1, 2, 3],
+      [4, 5, 6]
+    ],
+    protocol,
+    keyId,
+    toIdentityKey,
+    false,
+    true,
+    'before'
+  )
   const lockingScript = lock.toHex()
 
   // Use this label the new transaction can be found by `listActions` and as a "description" value.
@@ -207,7 +209,14 @@ export async function inputPushDrop(
 
   // Construct an "unlock" object which is then associated with the input to be signed
   // such that when the "sign" method is called, a signed "unlockingScript" is computed for that input.
-  const unlock = t.unlock(protocol, keyId, fromIdentityKey, "single", false, satoshis)
+  const unlock = t.unlock(
+    protocol,
+    keyId,
+    fromIdentityKey,
+    'single',
+    false,
+    satoshis
+  )
 
   const label = 'inputPushDrop'
 

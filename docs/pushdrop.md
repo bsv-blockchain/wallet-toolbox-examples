@@ -143,7 +143,10 @@ export async function outputPushDrop(setup: SetupWallet, toIdentityKey: string, 
     const t = new PushDrop(setup.wallet);
     const protocol: WalletProtocol = [2, "pushdropexample"];
     const keyId: string = "7";
-    const lock = await t.lock([[1, 2, 3], [4, 5, 6]], protocol, keyId, toIdentityKey, false, true, "before");
+    const lock = await t.lock([
+        [1, 2, 3],
+        [4, 5, 6]
+    ], protocol, keyId, toIdentityKey, false, true, "before");
     const lockingScript = lock.toHex();
     const label = "outputPushDrop";
     const car = await setup.wallet.createAction({
