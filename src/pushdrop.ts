@@ -124,6 +124,11 @@ export async function outputPushDrop(
     labels: [label],
     description: label
   })
+  // Always a good idea to confirm the status of new actions.
+  // With `acceptDelayedBroadcast` false, status should be 'unproven'.
+  // Otherwise status would normally be 'sending'.
+  if (car.sendWithResults!.some(r => r.status === 'failed'))
+    throw new Error('failed to send output creating transaction')
 
   // Both the "tx" and "txid" results are expected to be valid when an action is created that does not need explicit input signing,
   // and when the "signAndProcess" option is allowed to default to true.
@@ -264,7 +269,10 @@ export async function inputPushDrop(
    */
   const st = car.signableTransaction!
   const beef = Beef.fromBinary(st.tx)
-  const tx = beef.findAtomicTransaction(beef.txs.slice(-1)[0].txid)!
+  // Temporary work around for beef that may be missing locking transactions.
+  const tx = setup.wallet.beef.findAtomicTransaction(
+    beef.txs.slice(-1)[0].txid
+  )!
   tx.inputs[0].unlockingScriptTemplate = unlock
   await tx.sign()
   const unlockingScript = tx.inputs[0].unlockingScript!.toHex()
@@ -287,6 +295,9 @@ export async function inputPushDrop(
    * using specific script templates.
    */
   const sar = await setup.wallet.signAction(signArgs)
+  // After a signAction wihout delayed sending, check the sending status.
+  if (sar.sendWithResults!.some(r => r.status === 'failed'))
+    throw new Error('failed to send output consuming transaction')
 
   // This completes the example by logging evidence of what was created.
   {

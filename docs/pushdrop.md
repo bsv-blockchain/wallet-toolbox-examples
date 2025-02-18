@@ -72,7 +72,7 @@ export async function inputPushDrop(setup: SetupWallet, outputPushDrop: {
     });
     const st = car.signableTransaction!;
     const beef = Beef.fromBinary(st.tx);
-    const tx = beef.findAtomicTransaction(beef.txs.slice(-1)[0].txid)!;
+    const tx = setup.wallet.beef.findAtomicTransaction(beef.txs.slice(-1)[0].txid)!;
     tx.inputs[0].unlockingScriptTemplate = unlock;
     await tx.sign();
     const unlockingScript = tx.inputs[0].unlockingScript!.toHex();
@@ -84,6 +84,8 @@ export async function inputPushDrop(setup: SetupWallet, outputPushDrop: {
         }
     };
     const sar = await setup.wallet.signAction(signArgs);
+    if (sar.sendWithResults!.some(r => r.status === "failed"))
+        throw new Error("failed to send output consuming transaction");
     {
         const beef = Beef.fromBinary(sar.tx!);
         const txid = sar.txid!;
@@ -171,6 +173,8 @@ export async function outputPushDrop(setup: SetupWallet, toIdentityKey: string, 
         labels: [label],
         description: label
     });
+    if (car.sendWithResults!.some(r => r.status === "failed"))
+        throw new Error("failed to send output creating transaction");
     const beef = Beef.fromBinary(car.tx!);
     const outpoint = `${car.txid!}.0`;
     console.log(`
