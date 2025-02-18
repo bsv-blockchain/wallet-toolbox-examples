@@ -1,5 +1,5 @@
 import { Beef, SignActionArgs, PushDrop, WalletProtocol } from '@bsv/sdk'
-import { Setup, SetupWallet } from '@bsv/wallet-toolbox'
+import { Setup, SetupWallet, wait } from '@bsv/wallet-toolbox'
 
 /**
  * Example of moving satoshis from one wallet to another using the BRC29 script template.
@@ -18,16 +18,19 @@ import { Setup, SetupWallet } from '@bsv/wallet-toolbox'
 export async function transferPushDrop() {
   // obtain the secrets environment for the testnet network.
   const env = Setup.getEnv('test')
+
   // setup1 will be the sending wallet using the rootKey associated with identityKey, which is the default.
   const setup1 = await Setup.createWalletClient({ env })
+
   // setup2 will be the receiving wallet using the rootKey associated with identityKey2
-  const setup2 = await Setup.createWalletClient({
-    env,
-    rootKeyHex: env.devKeys[env.identityKey2]
-  })
+  //const setup2 = await Setup.createWalletClient({ env, rootKeyHex: env.devKeys[env.identityKey2] })
+  const setup2 = setup1
 
   // create a new transaction with an output for setup2 in the amount of 42 satoshis.
   const o = await outputPushDrop(setup1, setup2.identityKey, 42)
+
+  // Give whatsonchange longer to propagate first transaction...
+  await wait(5000)
 
   // use setup2 to consume the new output to demonstrate unlocking the output and adding it to the wallet's "change" outputs.
   await inputPushDrop(setup2, o)
