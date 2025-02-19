@@ -7,6 +7,7 @@ The examples documentation is split into various pages, common bits are describe
 - [listChange](./listChange.md) — List all spendable change outputs.
 - [backup](#function-backup) — Add and use a backup storage provider.
 - [p2pkh](./p2pkh.md) — Create and consume P2PKH outputs.
+- [brc29Funding](./brc29Funding.md) — Consume an externally generated BRC29 funding outputs.
 - [brc29](./brc29.md) — Create and consume BRC29 outputs to transfer satoshis between wallets.
 - [pushdrop](./pushdrop.md) — Mint and redeem PushDrop tokens.
 

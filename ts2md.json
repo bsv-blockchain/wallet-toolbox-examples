@@ -15,6 +15,13 @@
     },
     {
       "inputFilename": "src/index.ts",
+      "outputFilename": "docs/brc29Funding.md",
+      "firstHeadingLevel": 2,
+      "filenameSubString": "src/brc29Funding",
+      "noDetailsSummary": true
+    },
+    {
+      "inputFilename": "src/index.ts",
       "outputFilename": "docs/brc29.md",
       "firstHeadingLevel": 2,
       "filenameSubString": "src/brc29",
