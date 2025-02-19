@@ -34,7 +34,7 @@ export async function transferBRC29() {
   // create a new transaction with an output for setup2 in the amount of 42000 satoshis.
   const o = await outputBRC29(
     setup1,
-    '038781fce04b37d09ee9449565e547e1ef82a31f40a1984c238f3cf021534bfa38',
+    setup2.identityKey,
     42000
   )
 
