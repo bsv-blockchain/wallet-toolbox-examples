@@ -31,7 +31,9 @@ The "brc29" example extends this to demonstrate how to resolve drawbacks 1 and 2
 <!--#region ts2md-api-merged-here-->
 ### API
 
-Links: [API](#api), [Functions](#functions)
+Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
+
+#### Interfaces
 
 #### Functions
 
@@ -41,7 +43,7 @@ Links: [API](#api), [Functions](#functions)
 | [outputP2PKH](#function-outputp2pkh) |
 | [transferP2PKH](#function-transferp2pkh) |
 
-Links: [API](#api), [Functions](#functions)
+Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
 
 ---
 
@@ -136,7 +138,7 @@ the output's satoshis to the "change" managed by the context's wallet.
 + **outputP2PKH.satoshis**
   + The amount assigned to the output.
 
-Links: [API](#api), [Functions](#functions)
+Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
 
 ---
 ##### Function: outputP2PKH
@@ -213,7 +215,7 @@ Note that the output uses the "address" associated with this public key: The HAS
 + **satoshis**
   + How many satoshis to transfer to this new output.
 
-Links: [API](#api), [Functions](#functions)
+Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
 
 ---
 ##### Function: transferP2PKH
@@ -245,7 +247,7 @@ export async function transferP2PKH() {
 
 See also: [inputP2PKH](./p2pkh.md#function-inputp2pkh), [outputP2PKH](./p2pkh.md#function-outputp2pkh)
 
-Links: [API](#api), [Functions](#functions)
+Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
 
 ---
 

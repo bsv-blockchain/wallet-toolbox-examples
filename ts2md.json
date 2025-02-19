@@ -26,6 +26,13 @@
       "firstHeadingLevel": 2,
       "filenameSubString": "src/pushdrop",
       "noDetailsSummary": true
+    },
+    {
+      "inputFilename": "src/index.ts",
+      "outputFilename": "docs/listChange.md",
+      "firstHeadingLevel": 2,
+      "filenameSubString": "src/listChange",
+      "noDetailsSummary": true
     }
   ]
 }

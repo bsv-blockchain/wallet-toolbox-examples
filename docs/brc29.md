@@ -35,7 +35,9 @@ This example demonstrate how to resolve drawbacks 1 and 2.
 <!--#region ts2md-api-merged-here-->
 ### API
 
-Links: [API](#api), [Functions](#functions)
+Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
+
+#### Interfaces
 
 #### Functions
 
@@ -45,7 +47,7 @@ Links: [API](#api), [Functions](#functions)
 | [outputBRC29](#function-outputbrc29) |
 | [transferBRC29](#function-transferbrc29) |
 
-Links: [API](#api), [Functions](#functions)
+Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
 
 ---
 
@@ -147,7 +149,7 @@ the output's satoshis to the "change" managed by the context's wallet.
 + **outputBRC29.satoshis**
   + The amount assigned to the output.
 
-Links: [API](#api), [Functions](#functions)
+Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
 
 ---
 ##### Function: outputBRC29
@@ -250,7 +252,7 @@ Note that the output uses the "address" associated with this public key: The HAS
 + **satoshis**
   + How many satoshis to transfer to this new output.
 
-Links: [API](#api), [Functions](#functions)
+Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
 
 ---
 ##### Function: transferBRC29
@@ -274,14 +276,14 @@ export async function transferBRC29() {
         env,
         rootKeyHex: env.devKeys[env.identityKey2]
     });
-    const o = await outputBRC29(setup1, setup2.identityKey, 42);
+    const o = await outputBRC29(setup1, setup2.identityKey, 42000);
     await inputBRC29(setup2, o);
 }
 ```
 
 See also: [inputBRC29](./brc29.md#function-inputbrc29), [outputBRC29](./brc29.md#function-outputbrc29)
 
-Links: [API](#api), [Functions](#functions)
+Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
 
 ---
 

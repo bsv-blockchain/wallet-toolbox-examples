@@ -31,8 +31,8 @@ export async function transferBRC29() {
     rootKeyHex: env.devKeys[env.identityKey2]
   })
 
-  // create a new transaction with an output for setup2 in the amount of 42 satoshis.
-  const o = await outputBRC29(setup1, setup2.identityKey, 42)
+  // create a new transaction with an output for setup2 in the amount of 42000 satoshis.
+  const o = await outputBRC29(setup1, setup2.identityKey, 42000)
 
   // use setup2 to consume the new output to demonstrate unlocking the output and adding it to the wallet's "change" outputs.
   await inputBRC29(setup2, o)
