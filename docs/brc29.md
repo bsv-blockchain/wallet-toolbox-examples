@@ -206,7 +206,9 @@ export async function outputBRC29(setup: SetupWallet, toIdentityKey: string, sat
     const beef = Beef.fromBinary(car.tx!);
     const outpoint = `${car.txid!}.0`;
     console.log(`
-outputBRC29 to ${toIdentityKey}
+outputBRC29
+fromIdentityKey ${setup.identityKey}
+toIdentityKey ${toIdentityKey}
 derivationPrefix ${derivationPrefix}
 derivationSuffix ${derivationSuffix}
 outpoint ${outpoint}
@@ -276,7 +278,7 @@ export async function transferBRC29() {
         env,
         rootKeyHex: env.devKeys[env.identityKey2]
     });
-    const o = await outputBRC29(setup1, setup2.identityKey, 42000);
+    const o = await outputBRC29(setup1, "038781fce04b37d09ee9449565e547e1ef82a31f40a1984c238f3cf021534bfa38", 42000);
     await inputBRC29(setup2, o);
 }
 ```

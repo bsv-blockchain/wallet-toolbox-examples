@@ -86,7 +86,7 @@ export async function mintAndRedeemPushDropToken() {
         [4, 5, 6]
     ];
     const protocolID: WalletProtocol = [2, "pushdropexample"];
-    const keyID: string = "7";
+    const keyID: string = randomBytesBase64(8);
     const args: PushDropArgs = {
         protocolID,
         keyID,

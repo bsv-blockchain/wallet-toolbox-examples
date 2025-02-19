@@ -7,7 +7,12 @@ import {
   CreateActionOptions,
   WalletCounterparty
 } from '@bsv/sdk'
-import { Setup, SetupWallet, wait } from '@bsv/wallet-toolbox'
+import {
+  randomBytesBase64,
+  Setup,
+  SetupWallet,
+  wait
+} from '@bsv/wallet-toolbox'
 
 /**
  * @param {WalletProtocol} protocolID - The protocol ID to use.
@@ -74,7 +79,7 @@ export async function mintAndRedeemPushDropToken() {
    * The protocol and keyId define how keys are generated between token minters and redeemers.
    */
   const protocolID: WalletProtocol = [2, 'pushdropexample']
-  const keyID: string = '7'
+  const keyID: string = randomBytesBase64(8)
 
   const args: PushDropArgs = {
     protocolID,
