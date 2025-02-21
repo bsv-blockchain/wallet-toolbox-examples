@@ -1,48 +1,40 @@
-import { Setup } from '@bsv/wallet-toolbox'
+import { sdk, Setup, SetupEnv, SetupWallet } from '@bsv/wallet-toolbox'
 
 /**
  * @publicbody
  */
 export async function backup(): Promise<void> {
   const env = Setup.getEnv('test')
-
-  const setup = await Setup.createWalletClient({ env })
-
-  const { activeStorage: backup } = await Setup.createWalletSQLite({
-    env,
-    filePath: 'myBackup.sqlite',
-    databaseName: 'myBackup'
-  })
-
-  await setup.storage.addWalletStorageProvider(backup)
-
-  await setup.storage.updateBackups()
-
-  await backup.destroy()
+  await backupWalletClient(env, env.identityKey)
 }
 
 /**
  * @publicbody
  */
-export async function backup2(): Promise<void> {
-  const env = Setup.getEnv('test')
+export async function backupWalletClient(env: SetupEnv, identityKey: string): Promise<void> {
+  const setup = await Setup.createWalletClient({ env, rootKeyHex: env.devKeys[identityKey] })
+  await backupToSQLite(setup)
+  await setup.wallet.destroy()
+}
 
-  const setup = await Setup.createWalletClient({
+/**
+ * @publicbody
+ */
+export async function backupToSQLite(setup: SetupWallet, filePath?: string, databaseName?: string): Promise<void> {
+  const env = Setup.getEnv(setup.chain)
+  filePath ||= `backup_${setup.identityKey}.sqlite`
+  databaseName ||= `${setup.identityKey} backup`
+  
+  const { activeStorage: backup, storage, wallet } = await Setup.createWalletSQLite({
     env,
-    rootKeyHex: env.devKeys[env.identityKey2]
-  })
-
-  const { activeStorage: backup } = await Setup.createWalletSQLite({
-    env,
-    filePath: 'myBackup2.sqlite',
-    databaseName: 'myBackup2'
+    filePath,
+    databaseName,
+    rootKeyHex: setup.keyDeriver.rootKey.toHex()
   })
 
   await setup.storage.addWalletStorageProvider(backup)
 
   await setup.storage.updateBackups()
-
-  await backup.destroy()
 }
 
 backup().catch(console.error)
