@@ -43,7 +43,8 @@ Links: [API](#api), [Functions](#functions)
 | |
 | --- |
 | [backup](#function-backup) |
-| [backup2](#function-backup2) |
+| [backupToSQLite](#function-backuptosqlite) |
+| [backupWalletClient](#function-backupwalletclient) |
 | [balances](#function-balances) |
 | [makeEnv](#function-makeenv) |
 
@@ -56,42 +57,52 @@ Links: [API](#api), [Functions](#functions)
 ```ts
 export async function backup(): Promise<void> {
     const env = Setup.getEnv("test");
-    const setup = await Setup.createWalletClient({ env });
-    const { activeStorage: backup } = await Setup.createWalletSQLite({
-        env,
-        filePath: "myBackup.sqlite",
-        databaseName: "myBackup"
-    });
-    await setup.storage.addWalletStorageProvider(backup);
-    await setup.storage.updateBackups();
-    await backup.destroy();
+    await backupWalletClient(env, env.identityKey);
 }
 ```
+
+See also: [backupWalletClient](./README.md#function-backupwalletclient)
 
 Links: [API](#api), [Functions](#functions)
 
 ---
-##### Function: backup2
+##### Function: backupToSQLite
 
 ```ts
-export async function backup2(): Promise<void> {
-    const env = Setup.getEnv("test");
-    const setup = await Setup.createWalletClient({
+export async function backupToSQLite(setup: SetupWallet, filePath?: string, databaseName?: string): Promise<void> {
+    const env = Setup.getEnv(setup.chain);
+    filePath ||= `backup_${setup.identityKey}.sqlite`;
+    databaseName ||= `${setup.identityKey} backup`;
+    const backup = await Setup.createStorageKnex({
         env,
-        rootKeyHex: env.devKeys[env.identityKey2]
-    });
-    const { activeStorage: backup } = await Setup.createWalletSQLite({
-        env,
-        filePath: "myBackup2.sqlite",
-        databaseName: "myBackup2"
+        knex: Setup.createSQLiteKnex(filePath),
+        databaseName,
+        rootKeyHex: setup.keyDeriver.rootKey.toHex()
     });
     await setup.storage.addWalletStorageProvider(backup);
     await setup.storage.updateBackups();
-    await backup.destroy();
 }
 ```
 
 See also: [backup](./README.md#function-backup)
+
+Links: [API](#api), [Functions](#functions)
+
+---
+##### Function: backupWalletClient
+
+```ts
+export async function backupWalletClient(env: SetupEnv, identityKey: string): Promise<void> {
+    const setup = await Setup.createWalletClient({
+        env,
+        rootKeyHex: env.devKeys[identityKey]
+    });
+    await backupToSQLite(setup);
+    await setup.wallet.destroy();
+}
+```
+
+See also: [backupToSQLite](./README.md#function-backuptosqlite)
 
 Links: [API](#api), [Functions](#functions)
 

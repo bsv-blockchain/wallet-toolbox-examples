@@ -11,8 +11,14 @@ export async function backup(): Promise<void> {
 /**
  * @publicbody
  */
-export async function backupWalletClient(env: SetupEnv, identityKey: string): Promise<void> {
-  const setup = await Setup.createWalletClient({ env, rootKeyHex: env.devKeys[identityKey] })
+export async function backupWalletClient(
+  env: SetupEnv,
+  identityKey: string
+): Promise<void> {
+  const setup = await Setup.createWalletClient({
+    env,
+    rootKeyHex: env.devKeys[identityKey]
+  })
   await backupToSQLite(setup)
   await setup.wallet.destroy()
 }
@@ -20,14 +26,18 @@ export async function backupWalletClient(env: SetupEnv, identityKey: string): Pr
 /**
  * @publicbody
  */
-export async function backupToSQLite(setup: SetupWallet, filePath?: string, databaseName?: string): Promise<void> {
+export async function backupToSQLite(
+  setup: SetupWallet,
+  filePath?: string,
+  databaseName?: string
+): Promise<void> {
   const env = Setup.getEnv(setup.chain)
   filePath ||= `backup_${setup.identityKey}.sqlite`
   databaseName ||= `${setup.identityKey} backup`
-  
-  const { activeStorage: backup, storage, wallet } = await Setup.createWalletSQLite({
+
+  const backup = await Setup.createStorageKnex({
     env,
-    filePath,
+    knex: Setup.createSQLiteKnex(filePath),
     databaseName,
     rootKeyHex: setup.keyDeriver.rootKey.toHex()
   })

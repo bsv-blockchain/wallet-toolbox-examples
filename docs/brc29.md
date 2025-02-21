@@ -315,7 +315,7 @@ export async function transferBRC29() {
         env,
         rootKeyHex: env.devKeys[env.identityKey2]
     });
-    const o = await outputBRC29(setup1, "038781fce04b37d09ee9449565e547e1ef82a31f40a1984c238f3cf021534bfa38", 42000);
+    const o = await outputBRC29(setup1, setup2.identityKey, 42000);
     await inputBRC29(setup2, o);
 }
 ```
