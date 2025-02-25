@@ -20,7 +20,7 @@
     "test": "npm run build && jest",
     "test:watch": "npm run build && jest --watch",
     "test:coverage": "npm run build && jest --coverage",
-    "lint": "prettier --write 'src/**/*.ts' --loglevel silent",
+    "lint": "prettier --write 'src/**/*.ts' --log-level silent",
     "build": "tsc --build",
     "prepublish": "npm run lint && npm run build && npm run doc",
     "doc": "ts2md"
