@@ -5,6 +5,7 @@ import {
   Setup,
   SetupWallet
 } from '@bsv/wallet-toolbox'
+import { runArgv2Function } from './runArgv2Function'
 
 /**
  * Example of moving satoshis from one wallet to another using the BRC29 script template.
@@ -20,7 +21,7 @@ import {
  *
  * @publicbody
  */
-export async function transferBRC29() {
+export async function brc29() {
   // obtain the secrets environment for the testnet network.
   const env = Setup.getEnv('test')
   // setup1 will be the sending wallet using the rootKey associated with identityKey, which is the default.
@@ -301,4 +302,4 @@ ${beef.toLogString()}
   }
 }
 
-transferBRC29().catch(console.error)
+runArgv2Function(module.exports)

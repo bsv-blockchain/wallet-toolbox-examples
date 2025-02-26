@@ -1,4 +1,5 @@
 import { Setup } from '@bsv/wallet-toolbox'
+import { runArgv2Function } from './runArgv2Function'
 
 /**
  * The `balance` function demonstrates creating a `ServerClient` based wallet and
@@ -10,7 +11,7 @@ import { Setup } from '@bsv/wallet-toolbox'
  * Run this function using the following command:
  *
  * ```bash
- * npx tsx balances.ts
+ * npx tsx balances balances
  * ```
  *
  * @publicbody
@@ -42,4 +43,4 @@ export async function balances(): Promise<void> {
   }
 }
 
-balances().catch(console.error)
+runArgv2Function(module.exports)

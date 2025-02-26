@@ -1,29 +1,17 @@
-import {
-  Beef,
-  SignActionArgs,
-  PushDrop,
-  WalletProtocol,
-  Byte,
-  Utils,
-  CreateActionOptions,
-  Random,
-  CreateActionArgs,
-  SendWithResult
-} from '@bsv/sdk'
-import {
-  randomBytesBase64,
-  Setup,
-  SetupWallet,
-  wait
-} from '@bsv/wallet-toolbox'
+import { Beef, CreateActionOptions, Random, SendWithResult } from '@bsv/sdk'
+import { randomBytesBase64, Setup, SetupWallet } from '@bsv/wallet-toolbox'
 import {
   mintPushDropToken,
   PushDropArgs,
   PushDropToken,
   redeemPushDropToken
 } from './pushdrop'
+import { runArgv2Function } from './runArgv2Function'
 
-async function mintTokens(
+/**
+ * @publicbody
+ */
+export async function mintTokens(
   setup: SetupWallet,
   args: PushDropArgs,
   count: number,
@@ -54,7 +42,10 @@ async function mintTokens(
   return r
 }
 
-async function sendWith(
+/**
+ * @publicbody
+ */
+export async function sendWith(
   setup: SetupWallet,
   txids: string[]
 ): Promise<SendWithResult[]> {
@@ -71,7 +62,10 @@ async function sendWith(
   return car.sendWithResults!
 }
 
-async function redeemTokens(
+/**
+ * @publicbody
+ */
+export async function redeemTokens(
   setup: SetupWallet,
   tokens: PushDropToken[],
   noSendChange?: string[]
@@ -98,7 +92,10 @@ async function redeemTokens(
   return r
 }
 
-async function nosend() {
+/**
+ * @publicbody
+ */
+export async function nosend() {
   const env = Setup.getEnv('test')
   const setup = await Setup.createWalletClient({ env })
 
@@ -126,4 +123,4 @@ async function nosend() {
   )
 }
 
-nosend().catch(console.error)
+runArgv2Function(module.exports)

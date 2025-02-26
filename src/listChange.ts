@@ -1,6 +1,7 @@
 import { Beef } from '@bsv/sdk'
 import { Setup } from '@bsv/wallet-toolbox'
 import { parseWalletOutpoint } from '@bsv/wallet-toolbox/out/src/sdk'
+import { runArgv2Function } from './runArgv2Function'
 
 /**
  * Run this function using the following command:
@@ -46,12 +47,22 @@ Change for:
   }
 }
 
-function al(v: string | number, w: number): string {
+/**
+ * "Align Left" function for simple table formatting.
+ * Adds spaces to the end of a string or number value to
+ * return a string of minimum length `w`
+ */
+export function al(v: string | number, w: number): string {
   return v.toString().padEnd(w)
 }
 
-function ar(v: string | number, w: number): string {
+/**
+ * "Align Right" function for simple table formatting.
+ * Adds spaces to the start of a string or number value to
+ * return a string of minimum length `w`
+ */
+export function ar(v: string | number, w: number): string {
   return v.toString().padStart(w)
 }
 
-listChange().catch(console.error)
+runArgv2Function(module.exports)

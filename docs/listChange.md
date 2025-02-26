@@ -6,6 +6,42 @@ Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
 
 #### Functions
 
+| |
+| --- |
+| [al](#function-al) |
+| [ar](#function-ar) |
+| [listChange](#function-listchange) |
+
+Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
+
+---
+
+##### Function: al
+
+"Align Left" function for simple table formatting.
+Adds spaces to the end of a string or number value to
+return a string of minimum length `w`
+
+```ts
+export function al(v: string | number, w: number): string 
+```
+
+Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
+
+---
+##### Function: ar
+
+"Align Right" function for simple table formatting.
+Adds spaces to the start of a string or number value to
+return a string of minimum length `w`
+
+```ts
+export function ar(v: string | number, w: number): string 
+```
+
+Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
+
+---
 ##### Function: listChange
 
 Run this function using the following command:
@@ -45,6 +81,8 @@ Change for:
     }
 }
 ```
+
+See also: [al](./listChange.md#function-al), [ar](./listChange.md#function-ar)
 
 Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
 

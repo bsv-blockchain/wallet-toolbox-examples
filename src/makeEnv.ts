@@ -1,4 +1,5 @@
 import { Setup } from '@bsv/wallet-toolbox'
+import { runArgv2Function } from './runArgv2Function'
 
 /**
  * Running the `makeEnv` function generates several new private keys
@@ -24,4 +25,4 @@ export function makeEnv() {
   Setup.makeEnv()
 }
 
-makeEnv()
+runArgv2Function(module.exports)

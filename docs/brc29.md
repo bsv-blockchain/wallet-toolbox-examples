@@ -43,15 +43,82 @@ Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
 
 | |
 | --- |
+| [brc29](#function-brc29) |
+| [brc29Funding](#function-brc29funding) |
 | [inputBRC29](#function-inputbrc29) |
 | [outputBRC29](#function-outputbrc29) |
-| [receiveBRC29Funding](#function-receivebrc29funding) |
-| [transferBRC29](#function-transferbrc29) |
 
 Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
 
 ---
 
+##### Function: brc29
+
+Example of moving satoshis from one wallet to another using the BRC29 script template.
+
+This example can be run by the following command:
+
+```bash
+npx tsx brc29.ts
+```
+
+Combine this with the [balances](./README.md#function-balances) example to observe satoshis being transfered between
+two wallets.
+
+```ts
+export async function brc29() {
+    const env = Setup.getEnv("test");
+    const setup1 = await Setup.createWalletClient({ env });
+    const setup2 = await Setup.createWalletClient({
+        env,
+        rootKeyHex: env.devKeys[env.identityKey2]
+    });
+    const o = await outputBRC29(setup1, setup2.identityKey, 42000);
+    await inputBRC29(setup2, o);
+}
+```
+
+See also: [inputBRC29](./brc29.md#function-inputbrc29), [outputBRC29](./brc29.md#function-outputbrc29)
+
+Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
+
+---
+##### Function: brc29Funding
+
+Example receiving funding satoshis from an external BRC-100 wallet to your wallet to another using the BRC29 script template.
+
+Edit the funding information into this example, then run the code.
+
+This example can be run by the following command:
+
+```bash
+npx tsx brc29Funding.ts
+```
+
+Combine this with the [balances](./README.md#function-balances) example to observe satoshis being transfered between
+two wallets.
+
+```ts
+export async function brc29Funding() {
+    const env = Setup.getEnv("test");
+    const setup = await Setup.createWalletClient({ env });
+    const funding = {
+        beef: Beef.fromString(""),
+        outpoint: "",
+        fromIdentityKey: "",
+        satoshis: 0,
+        derivationPrefix: "",
+        derivationSuffix: ""
+    };
+    await inputBRC29(setup, funding);
+}
+```
+
+See also: [inputBRC29](./brc29.md#function-inputbrc29)
+
+Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
+
+---
 ##### Function: inputBRC29
 
 Consume a BRC29 output.
@@ -254,73 +321,6 @@ Argument Details
 Note that the output uses the "address" associated with this public key: The HASH160 of the public key.
 + **satoshis**
   + How many satoshis to transfer to this new output.
-
-Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
-
----
-##### Function: receiveBRC29Funding
-
-Example receiving funding satoshis from an external BRC-100 wallet to your wallet to another using the BRC29 script template.
-
-Edit the funding information into this example, then run the code.
-
-This example can be run by the following command:
-
-```bash
-npx tsx brc29Funding.ts
-```
-
-Combine this with the [balances](./README.md#function-balances) example to observe satoshis being transfered between
-two wallets.
-
-```ts
-export async function receiveBRC29Funding() {
-    const env = Setup.getEnv("test");
-    const setup = await Setup.createWalletClient({ env });
-    const funding = {
-        beef: Beef.fromString(""),
-        outpoint: "",
-        fromIdentityKey: "",
-        satoshis: 0,
-        derivationPrefix: "",
-        derivationSuffix: ""
-    };
-    await inputBRC29(setup, funding);
-}
-```
-
-See also: [inputBRC29](./brc29.md#function-inputbrc29)
-
-Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
-
----
-##### Function: transferBRC29
-
-Example of moving satoshis from one wallet to another using the BRC29 script template.
-
-This example can be run by the following command:
-
-```bash
-npx tsx brc29.ts
-```
-
-Combine this with the [balances](./README.md#function-balances) example to observe satoshis being transfered between
-two wallets.
-
-```ts
-export async function transferBRC29() {
-    const env = Setup.getEnv("test");
-    const setup1 = await Setup.createWalletClient({ env });
-    const setup2 = await Setup.createWalletClient({
-        env,
-        rootKeyHex: env.devKeys[env.identityKey2]
-    });
-    const o = await outputBRC29(setup1, setup2.identityKey, 42000);
-    await inputBRC29(setup2, o);
-}
-```
-
-See also: [inputBRC29](./brc29.md#function-inputbrc29), [outputBRC29](./brc29.md#function-outputbrc29)
 
 Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
 

@@ -7,9 +7,10 @@ The examples documentation is split into various pages, common bits are describe
 - [listChange](./listChange.md) — List all spendable change outputs.
 - [backup](#function-backup) — Add and use a backup storage provider.
 - [p2pkh](./p2pkh.md) — Create and consume P2PKH outputs.
-- [brc29Funding](./brc29Funding.md) — Consume an externally generated BRC29 funding outputs.
+- [internalize](./internalize.md) — Gain control over externally generated transaction outputs.
 - [brc29](./brc29.md) — Create and consume BRC29 outputs to transfer satoshis between wallets.
 - [pushdrop](./pushdrop.md) — Mint and redeem PushDrop tokens.
+- [nosend](./nosend.md) — Create "unsent" and batched transactions.
 
 ## Getting Started
 
@@ -47,6 +48,7 @@ Links: [API](#api), [Functions](#functions)
 | [backupWalletClient](#function-backupwalletclient) |
 | [balances](#function-balances) |
 | [makeEnv](#function-makeenv) |
+| [runArgv2Function](#function-runargv2function) |
 
 Links: [API](#api), [Functions](#functions)
 
@@ -118,7 +120,7 @@ and receives new outputs generated to recapture excess funding.
 Run this function using the following command:
 
 ```bash
-npx tsx balances.ts
+npx tsx balances balances
 ```
 
 ```ts
@@ -166,6 +168,31 @@ export function makeEnv() {
     Setup.makeEnv();
 }
 ```
+
+Links: [API](#api), [Functions](#functions)
+
+---
+##### Function: runArgv2Function
+
+Used to run a named function from a command line of the form:
+
+`npx txs filename.ts functionName`
+
+Where `functionName` is an exported async function taking no arguments returning void.
+
+Does nothing if functionName doesn't resolve to an exported function.
+
+Optionally, if there is a functionName in `module_exports` that matches the filename,
+then 'functionName' can be ommitted.
+
+```ts
+export function runArgv2Function(module_exports: object): void 
+```
+
+Argument Details
+
++ **module_exports**
+  + pass in `module.exports` to resolve functionName
 
 Links: [API](#api), [Functions](#functions)
 
