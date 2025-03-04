@@ -47,7 +47,7 @@ Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
 Run this function using the following command:
 
 ```bash
-npx tsx listChange.ts
+npx tsx listChange
 ```
 
 ```ts

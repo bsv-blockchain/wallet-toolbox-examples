@@ -22,7 +22,7 @@ Example of internalizing a BRC29 wallet payment output into a receiving wallet.
 This example can be run by the following command:
 
 ```bash
-npx tsx internalizeWalletPayment.ts
+npx tsx internalizeWalletPayment
 ```
 
 Combine this with the [balances](./README.md#function-balances) example to observe satoshis being transfered between

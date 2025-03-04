@@ -112,6 +112,26 @@ Links: [API](#api), [Functions](#functions)
 ---
 ##### Function: balanceSpecOp
 
+Special Operations (specOps) are extensions to the base BRC-100 Wallet
+standard operations.
+
+This implementation of change balance computation uses `specOpWalletBalance`,
+which is a special 'basket' value that modifies the default behavior of the
+`listOutputs` method.
+
+In the case of `specOpWalletBalance`, it automatically selects all the
+spendable, 'default' basket, change outputs and returns the sum of their
+`satoshis` properties, returning the sum as the `totalOutputs` property.
+
+This is not only simpler to code, but more efficient as the outputs
+do not need to be sent to the client. Only the sum of satoshis is returned.
+
+This function can be run from the command line as:
+
+```bash
+npx txs balances balanceSpecOp
+```
+
 ```ts
 export async function balanceSpecOp(): Promise<void> 
 ```
@@ -130,7 +150,7 @@ and receives new outputs generated to recapture excess funding.
 Run this function using the following command:
 
 ```bash
-npx tsx balances balances
+npx tsx balances
 ```
 
 ```ts
@@ -178,7 +198,7 @@ capture the output into a file named '.env',
 and display the file's contents:
 
 ```bash
-npx tsx makeEnv.ts > .env; cat .env
+npx tsx makeEnv > .env; cat .env
 ```
 
 ```ts

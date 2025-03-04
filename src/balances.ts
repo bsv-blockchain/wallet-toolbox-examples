@@ -57,20 +57,20 @@ export async function balances(): Promise<void> {
 /**
  * Special Operations (specOps) are extensions to the base BRC-100 Wallet
  * standard operations.
- * 
+ *
  * This implementation of change balance computation uses `specOpWalletBalance`,
  * which is a special 'basket' value that modifies the default behavior of the
  * `listOutputs` method.
- * 
+ *
  * In the case of `specOpWalletBalance`, it automatically selects all the
  * spendable, 'default' basket, change outputs and returns the sum of their
  * `satoshis` properties, returning the sum as the `totalOutputs` property.
- * 
+ *
  * This is not only simpler to code, but more efficient as the outputs
  * do not need to be sent to the client. Only the sum of satoshis is returned.
- * 
+ *
  * This function can be run from the command line as:
- * 
+ *
  * ```bash
  * npx txs balances balanceSpecOp
  * ```

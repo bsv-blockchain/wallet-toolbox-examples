@@ -74,7 +74,7 @@ Example of created a data bearing token and redeeming it using the PushDrop scri
 This example can be run by the following command:
 
 ```bash
-npx tsx pushdrop.ts
+npx tsx pushdrop
 ```
 
 ```ts

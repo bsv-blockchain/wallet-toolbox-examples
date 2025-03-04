@@ -59,7 +59,7 @@ Example of moving satoshis from one wallet to another using the BRC29 script tem
 This example can be run by the following command:
 
 ```bash
-npx tsx brc29.ts
+npx tsx brc29
 ```
 
 Combine this with the [balances](./README.md#function-balances) example to observe satoshis being transfered between
@@ -92,7 +92,7 @@ Edit the funding information into this example, then run the code.
 This example can be run by the following command:
 
 ```bash
-npx tsx brc29Funding.ts
+npx tsx brc29Funding
 ```
 
 Combine this with the [balances](./README.md#function-balances) example to observe satoshis being transfered between

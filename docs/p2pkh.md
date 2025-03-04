@@ -226,7 +226,7 @@ to send directly to the "address" associated with a private key.
 This example can be run by the following command:
 
 ```bash
-npx tsx p2pkh.ts
+npx tsx p2pkh
 ```
 
 Combine this with the [balances](./README.md#function-balances) example to observe satoshis being transfered between
