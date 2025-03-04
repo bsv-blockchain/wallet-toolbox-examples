@@ -54,7 +54,7 @@ export interface PushDropToken {
  * This example can be run by the following command:
  *
  * ```bash
- * npx tsx pushdrop.ts
+ * npx tsx pushdrop
  * ```
  *
  * @publicbody

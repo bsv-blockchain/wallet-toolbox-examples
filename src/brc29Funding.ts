@@ -11,7 +11,7 @@ import { runArgv2Function } from './runArgv2Function'
  * This example can be run by the following command:
  *
  * ```bash
- * npx tsx brc29Funding.ts
+ * npx tsx brc29Funding
  * ```
  *
  * Combine this with the [balances](./README.md#function-balances) example to observe satoshis being transfered between

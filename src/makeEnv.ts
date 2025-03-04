@@ -16,7 +16,7 @@ import { runArgv2Function } from './runArgv2Function'
  * and display the file's contents:
  *
  * ```bash
- * npx tsx makeEnv.ts > .env; cat .env
+ * npx tsx makeEnv > .env; cat .env
  * ```
  *
  * @publicbody
@@ -25,4 +25,4 @@ export function makeEnv() {
   Setup.makeEnv()
 }
 
-runArgv2Function(module.exports)
+makeEnv()

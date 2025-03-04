@@ -8,7 +8,7 @@ import { Setup, SetupWallet } from '@bsv/wallet-toolbox'
  * This example can be run by the following command:
  *
  * ```bash
- * npx tsx p2pkh.ts
+ * npx tsx p2pkh
  * ```
  *
  * Combine this with the [balances](./README.md#function-balances) example to observe satoshis being transfered between

@@ -7,7 +7,7 @@ import { runArgv2Function } from './runArgv2Function'
  * Run this function using the following command:
  *
  * ```bash
- * npx tsx listChange.ts
+ * npx tsx listChange
  * ```
  *
  * @publicbody

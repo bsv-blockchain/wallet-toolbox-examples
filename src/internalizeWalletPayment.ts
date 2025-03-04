@@ -22,7 +22,7 @@ import { runArgv2Function } from './runArgv2Function'
  * This example can be run by the following command:
  *
  * ```bash
- * npx tsx internalizeWalletPayment.ts
+ * npx tsx internalizeWalletPayment
  * ```
  *
  * Combine this with the [balances](./README.md#function-balances) example to observe satoshis being transfered between

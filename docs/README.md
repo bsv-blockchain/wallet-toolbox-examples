@@ -141,11 +141,19 @@ export async function balances(): Promise<void> {
             env,
             rootKeyHex: env.devKeys[identityKey]
         });
-        const change = await setup.wallet.listOutputs({
-            basket: "default",
-            limit: 1000
-        });
-        const balance = change.outputs.reduce((b, o) => (b += o.satoshis), 0);
+        let balance = 0;
+        let offset = 0;
+        for (;;) {
+            const change = await setup.wallet.listOutputs({
+                basket: "default",
+                limit: 10,
+                offset
+            });
+            balance += change.outputs.reduce((b, o) => (b += o.satoshis), 0);
+            offset += change.outputs.length;
+            if (change.outputs.length === 0 || offset >= change.totalOutputs)
+                break;
+        }
         console.log(`balance for ${identityKey} = ${balance}`);
     }
 }
