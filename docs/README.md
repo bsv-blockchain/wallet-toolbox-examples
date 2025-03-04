@@ -46,6 +46,7 @@ Links: [API](#api), [Functions](#functions)
 | [backup](#function-backup) |
 | [backupToSQLite](#function-backuptosqlite) |
 | [backupWalletClient](#function-backupwalletclient) |
+| [balanceSpecOp](#function-balancespecop) |
 | [balances](#function-balances) |
 | [makeEnv](#function-makeenv) |
 | [runArgv2Function](#function-runargv2function) |
@@ -105,6 +106,15 @@ export async function backupWalletClient(env: SetupEnv, identityKey: string): Pr
 ```
 
 See also: [backupToSQLite](./README.md#function-backuptosqlite)
+
+Links: [API](#api), [Functions](#functions)
+
+---
+##### Function: balanceSpecOp
+
+```ts
+export async function balanceSpecOp(): Promise<void> 
+```
 
 Links: [API](#api), [Functions](#functions)
 

@@ -43,4 +43,25 @@ export async function balances(): Promise<void> {
   }
 }
 
+export async function balanceSpecOp(): Promise<void> {
+  // Read the "secrets" from the .env file created by `makeEnv`
+  const env = Setup.getEnv('test')
+
+    const setup = await Setup.createWalletClient({
+      env,
+      rootKeyHex: env.devKeys[env.identityKey]
+    })
+
+    const r = await setup.wallet.listOutputs({
+      basket: specOp
+      limit: 1000
+    })
+
+    // Sum the "satoshis" held by each output to compute the available balance.
+    const balance = change.outputs.reduce((b, o) => (b += o.satoshis), 0)
+
+    console.log(`balance for ${identityKey} = ${balance}`)
+  }
+}
+
 runArgv2Function(module.exports)
