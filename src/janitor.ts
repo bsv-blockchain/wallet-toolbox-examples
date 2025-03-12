@@ -9,6 +9,8 @@ import { ar } from './listChange'
 /**
  * Uses a special operation mode of the listOutputs function to list all the invalid change outputs.
  *
+ * Note that if any un-spendable outputs are found, they can be "released" by running the `release` function.
+ *
  * @param identityKey A wallet identity key value with a valid mapping to a private key in the .env file.
  * @param chain The chain to use, either 'main' or 'test'.
  *

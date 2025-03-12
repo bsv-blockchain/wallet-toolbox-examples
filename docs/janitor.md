@@ -1,6 +1,6 @@
 # Janitor Example: BSV Wallet Toolbox API Documentation
 
-The documentation is split into various pages, this page covers `@bsv/wallet-toolbox` the janitorial
+The documentation is split into various pages, this page covers the janitorial
 function of verifying your wallet's unspent change outputs.
 
 Each BRC-100 wallet manages a 'default' basket of outputs to be used to fund new transaction and into which excess funding is returned.
@@ -63,6 +63,8 @@ Links: [API](#api), [Interfaces](#interfaces), [Functions](#functions)
 ##### Function: janitorOnIdentity
 
 Uses a special operation mode of the listOutputs function to list all the invalid change outputs.
+
+Note that if any un-spendable outputs are found, they can be "released" by running the `release` function.
 
 ```ts
 export async function janitorOnIdentity(identityKey: string, chain: sdk.Chain): Promise<void> {
