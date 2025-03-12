@@ -5,6 +5,7 @@ The examples documentation is split into various pages, common bits are describe
 - [makeEnv](#function-makeenv) — Create a '.env' file with secrets to support experimentation.
 - [balances](#function-balances) — Sum available change outputs to display wallet balances.
 - [listChange](./listChange.md) — List all spendable change outputs.
+- [janitor](./janitor.md) — Cleanup invalid change outputs using `listOutputs` special operation.
 - [backup](#function-backup) — Add and use a backup storage provider.
 - [p2pkh](./p2pkh.md) — Create and consume P2PKH outputs.
 - [internalize](./internalize.md) — Gain control over externally generated transaction outputs.

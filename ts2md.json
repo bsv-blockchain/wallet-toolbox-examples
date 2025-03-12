@@ -47,6 +47,13 @@
       "firstHeadingLevel": 2,
       "filenameSubString": "src/nosend",
       "noDetailsSummary": true
+    },
+    {
+      "inputFilename": "src/index.ts",
+      "outputFilename": "docs/janitor.md",
+      "firstHeadingLevel": 2,
+      "filenameSubString": "src/janitor",
+      "noDetailsSummary": true
     }
   ]
 }
