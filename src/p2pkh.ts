@@ -1,5 +1,6 @@
 import { Beef, PrivateKey, PublicKey, SignActionArgs } from '@bsv/sdk'
 import { Setup, SetupWallet } from '@bsv/wallet-toolbox'
+import { runArgv2Function } from './runArgv2Function'
 
 /**
  * Example of moving satoshis from one wallet to another using the P2PKH template
@@ -32,6 +33,22 @@ export async function transferP2PKH() {
 
   // use setup2 to consume the new output to demonstrate unlocking the output and adding it to the wallet's "change" outputs.
   await inputP2PKH(setup2, o)
+}
+
+export async function p2pkhToAddress() {
+  // obtain the secrets environment for the testnet network.
+  const env = Setup.getEnv('main')
+  // setup1 will be the sending wallet using the rootKey associated with identityKey, which is the default.
+  const setup1 = await Setup.createWalletClient({ env })
+  // setup2 will be the receiving wallet using the rootKey associated with identityKey2
+  const setup2 = await Setup.createWalletClient({
+    env,
+    rootKeyHex: env.devKeys[env.identityKey2]
+  })
+
+  // create a new transaction with an output for setup2 in the amount of 42 satoshis.
+  const o = await outputP2PKH(setup1, setup2.identityKey, 10)
+
 }
 
 /**
@@ -68,7 +85,8 @@ export async function outputP2PKH(
   satoshis: number
 }> {
   // Convert the destination identity key into its associated address and use that to generate a locking script.
-  const address = PublicKey.fromString(toIdentityKey).toAddress()
+  let address = PublicKey.fromString(toIdentityKey).toAddress()
+  address = '1BSMQ1PxMbzMqjB47EYaSNBAD7Qme1dXuk' 
   const lock = Setup.getLockP2PKH(address)
 
   // Use this label the new transaction can be found by `listActions` and as a "description" value.
@@ -259,4 +277,8 @@ ${beef.toLogString()}
   }
 }
 
-transferP2PKH().catch(console.error)
+async function p2pkh() : Promise<void> {
+  await transferP2PKH()
+}
+
+runArgv2Function(module.exports)
