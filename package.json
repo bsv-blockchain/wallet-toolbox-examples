@@ -52,6 +52,6 @@
   },
   "dependencies": {
     "@bsv/sdk": "^1.4.3",
-    "@bsv/wallet-toolbox": "^1.2.7"
+    "@bsv/wallet-toolbox": "^1.2.8"
   }
 }
