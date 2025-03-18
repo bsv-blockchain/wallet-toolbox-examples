@@ -51,6 +51,7 @@ Links: [API](#api), [Functions](#functions)
 | [balances](#function-balances) |
 | [makeEnv](#function-makeenv) |
 | [runArgv2Function](#function-runargv2function) |
+| [walletBalance](#function-walletbalance) |
 
 Links: [API](#api), [Functions](#functions)
 
@@ -232,6 +233,24 @@ Argument Details
 
 + **module_exports**
   + pass in `module.exports` to resolve functionName
+
+Links: [API](#api), [Functions](#functions)
+
+---
+##### Function: walletBalance
+
+And if your BRC-100 wallet supports the `balance` extension method
+based on specOpWalletBalance, this is the fastest and easiest way.
+
+This function can be run from the command line as:
+
+```bash
+npx txs balances walletBalance
+```
+
+```ts
+export async function walletBalance(): Promise<void> 
+```
 
 Links: [API](#api), [Functions](#functions)
 

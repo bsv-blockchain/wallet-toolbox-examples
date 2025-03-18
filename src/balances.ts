@@ -88,4 +88,26 @@ export async function balanceSpecOp(): Promise<void> {
   console.log(`balance for ${env.identityKey} = ${balance}`)
 }
 
+/**
+ * And if your BRC-100 wallet supports the `balance` extension method
+ * based on specOpWalletBalance, this is the fastest and easiest way.
+ *
+ * This function can be run from the command line as:
+ *
+ * ```bash
+ * npx txs balances walletBalance
+ * ```
+ */
+export async function walletBalance(): Promise<void> {
+  const env = Setup.getEnv('test')
+  const setup = await Setup.createWalletClient({
+    env,
+    rootKeyHex: env.devKeys[env.identityKey]
+  })
+
+  const balance = await setup.wallet.balance()
+
+  console.log(`balance for ${env.identityKey} = ${balance}`)
+}
+
 runArgv2Function(module.exports)
