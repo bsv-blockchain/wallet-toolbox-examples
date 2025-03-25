@@ -85,8 +85,7 @@ export async function outputP2PKH(
   satoshis: number
 }> {
   // Convert the destination identity key into its associated address and use that to generate a locking script.
-  let address = PublicKey.fromString(toIdentityKey).toAddress()
-  address = '1BSMQ1PxMbzMqjB47EYaSNBAD7Qme1dXuk' 
+  const address = PublicKey.fromString(toIdentityKey).toAddress()
   const lock = Setup.getLockP2PKH(address)
 
   // Use this label the new transaction can be found by `listActions` and as a "description" value.
