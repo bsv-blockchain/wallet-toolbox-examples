@@ -161,8 +161,7 @@ export async function outputP2PKH(setup: SetupWallet, toIdentityKey: string, sat
     toIdentityKey: string;
     satoshis: number;
 }> {
-    let address = PublicKey.fromString(toIdentityKey).toAddress();
-    address = "1BSMQ1PxMbzMqjB47EYaSNBAD7Qme1dXuk";
+    const address = PublicKey.fromString(toIdentityKey).toAddress();
     const lock = Setup.getLockP2PKH(address);
     const label = "outputP2PKH";
     const car = await setup.wallet.createAction({
