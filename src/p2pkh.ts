@@ -48,7 +48,6 @@ export async function p2pkhToAddress() {
 
   // create a new transaction with an output for setup2 in the amount of 42 satoshis.
   const o = await outputP2PKH(setup1, setup2.identityKey, 10)
-
 }
 
 /**
@@ -276,7 +275,7 @@ ${beef.toLogString()}
   }
 }
 
-async function p2pkh() : Promise<void> {
+async function p2pkh(): Promise<void> {
   await transferP2PKH()
 }
 
