@@ -7,6 +7,7 @@ The examples documentation is split into various pages, common bits are describe
 - [listChange](./listChange.md) — List all spendable change outputs.
 - [janitor](./janitor.md) — Cleanup invalid change outputs using `listOutputs` special operation.
 - [backup](#function-backup) — Add and use a backup storage provider.
+- [swapActive](#function-swapactive) - Add and swap between two `StorageClient` storage providers.
 - [p2pkh](./p2pkh.md) — Create and consume P2PKH outputs.
 - [internalize](./internalize.md) — Gain control over externally generated transaction outputs.
 - [brc29](./brc29.md) — Create and consume BRC29 outputs to transfer satoshis between wallets.
@@ -51,6 +52,8 @@ Links: [API](#api), [Functions](#functions)
 | [balances](#function-balances) |
 | [makeEnv](#function-makeenv) |
 | [runArgv2Function](#function-runargv2function) |
+| [swapActive](#function-swapactive) |
+| [swapActiveWalletClient](#function-swapactivewalletclient) |
 | [walletBalance](#function-walletbalance) |
 
 Links: [API](#api), [Functions](#functions)
@@ -233,6 +236,48 @@ Argument Details
 
 + **module_exports**
   + pass in `module.exports` to resolve functionName
+
+Links: [API](#api), [Functions](#functions)
+
+---
+##### Function: swapActive
+
+```ts
+export async function swapActive(): Promise<void> {
+    const env = Setup.getEnv("main");
+    await swapActiveWalletClient(env, env.identityKey, "https://store.txs.systems");
+}
+```
+
+See also: [swapActiveWalletClient](./README.md#function-swapactivewalletclient)
+
+Links: [API](#api), [Functions](#functions)
+
+---
+##### Function: swapActiveWalletClient
+
+```ts
+export async function swapActiveWalletClient(env: SetupEnv, identityKey: string, endpointUrl: string): Promise<SetupWallet> {
+    const setup = await Setup.createWallet({ env, rootKeyHex: env.devKeys[identityKey] });
+    const client1 = new StorageClient(setup.wallet, endpointUrl);
+    const client2 = new StorageClient(setup.wallet, "https://storage.babbage.systems");
+    const settings1 = await client1.makeAvailable();
+    const settings2 = await client2.makeAvailable();
+    await setup.storage.addWalletStorageProvider(client1);
+    await setup.storage.addWalletStorageProvider(client2);
+    const activeStorageIdentity = setup.storage.getActiveStore();
+    if (activeStorageIdentity === settings1.storageIdentityKey) {
+        await setup.storage.setActive(settings2.storageIdentityKey);
+    }
+    else if (activeStorageIdentity === settings2.storageIdentityKey) {
+        await setup.storage.setActive(settings1.storageIdentityKey);
+    }
+    else {
+        throw new Error(`${activeStorageIdentity} is not an available storage identity`);
+    }
+    return setup;
+}
+```
 
 Links: [API](#api), [Functions](#functions)
 
