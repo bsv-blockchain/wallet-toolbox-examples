@@ -258,7 +258,10 @@ Links: [API](#api), [Functions](#functions)
 
 ```ts
 export async function swapActiveWalletClient(env: SetupEnv, identityKey: string, endpointUrl: string): Promise<SetupWallet> {
-    const setup = await Setup.createWallet({ env, rootKeyHex: env.devKeys[identityKey] });
+    const setup = await Setup.createWallet({
+        env,
+        rootKeyHex: env.devKeys[identityKey]
+    });
     const client1 = new StorageClient(setup.wallet, endpointUrl);
     const client2 = new StorageClient(setup.wallet, "https://storage.babbage.systems");
     const settings1 = await client1.makeAvailable();
