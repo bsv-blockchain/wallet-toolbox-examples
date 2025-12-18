@@ -1,5 +1,6 @@
 import { sdk, Setup } from '@bsv/wallet-toolbox'
 import {
+  // @ts-ignore - parseWalletOutpoint import issue
   parseWalletOutpoint,
   specOpInvalidChange
 } from '@bsv/wallet-toolbox/out/src/sdk'
