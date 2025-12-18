@@ -1,6 +1,6 @@
 import { sdk, Setup } from '@bsv/wallet-toolbox'
 import {
-  parseWalletOutpoint,
+  // parseWalletOutpoint,
   specOpInvalidChange
 } from '@bsv/wallet-toolbox/out/src/sdk'
 import { runArgv2Function } from './runArgv2Function'
@@ -47,8 +47,8 @@ Janitor list invalid change outputs for:
       '-----------|-------|--------------------------------------------'
     )
     for (const o of change.outputs) {
-      const { txid, vout } = parseWalletOutpoint(o.outpoint)
-      console.log(`${ar(o.satoshis, 10)} | ${ar(vout, 5)} | ${txid}`)
+      // const { txid, vout } = parseWalletOutpoint(o.outpoint)
+      console.log(`${ar(o.satoshis, 10)} | ${o.outpoint.toString()}`)
     }
   }
 }

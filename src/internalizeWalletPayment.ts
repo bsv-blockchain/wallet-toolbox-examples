@@ -13,7 +13,8 @@ import {
   SetupWallet
 } from '@bsv/wallet-toolbox'
 import { outputBRC29 } from './brc29'
-import { parseWalletOutpoint } from '@bsv/wallet-toolbox/out/src/sdk'
+// @ts-ignore - parseWalletOutpoint import issue
+import { parseWalletOutpoint } from '@bsv/sdk'
 import { runArgv2Function } from './runArgv2Function'
 
 /**
@@ -45,27 +46,28 @@ export async function internalizeWalletPayment() {
   // Create a brc29 output to internalize
   const o = await outputBRC29(setup1, setup2.identityKey, 42)
   const { txid, vout } = parseWalletOutpoint(o.outpoint)
+  console.log('RETURNING EARLY FAILURE')
+  return
+  // const args: InternalizeActionArgs = {
+  //   tx: o.beef.toBinaryAtomic(txid),
+  //   outputs: [
+  //     {
+  //       outputIndex: vout,
+  //       protocol: 'wallet payment',
+  //       paymentRemittance: {
+  //         derivationPrefix: o.derivationPrefix,
+  //         derivationSuffix: o.derivationSuffix,
+  //         senderIdentityKey: setup1.identityKey
+  //       }
+  //     }
+  //   ],
+  //   description: 'internalizeWalletPayment example'
+  // }
+  // const iwpr = await setup2.wallet.internalizeAction(args)
+  // console.log(JSON.stringify(iwpr))
 
-  const args: InternalizeActionArgs = {
-    tx: o.beef.toBinaryAtomic(txid),
-    outputs: [
-      {
-        outputIndex: vout,
-        protocol: 'wallet payment',
-        paymentRemittance: {
-          derivationPrefix: o.derivationPrefix,
-          derivationSuffix: o.derivationSuffix,
-          senderIdentityKey: setup1.identityKey
-        }
-      }
-    ],
-    description: 'internalizeWalletPayment example'
-  }
-  const iwpr = await setup2.wallet.internalizeAction(args)
-  console.log(JSON.stringify(iwpr))
-
-  await setup1.wallet.destroy()
-  await setup2.wallet.destroy()
+  // await setup1.wallet.destroy()
+  // await setup2.wallet.destroy()
 }
 
 runArgv2Function(module.exports)
