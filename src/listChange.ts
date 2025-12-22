@@ -1,5 +1,6 @@
 import { Beef } from '@bsv/sdk'
 import { Setup } from '@bsv/wallet-toolbox'
+// @ts-ignore - parseWalletOutpoint import issue
 import { parseWalletOutpoint } from '@bsv/wallet-toolbox/out/src/sdk'
 import { runArgv2Function } from './runArgv2Function'
 
