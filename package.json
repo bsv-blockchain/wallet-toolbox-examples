@@ -23,7 +23,10 @@
     "lint": "prettier --write 'src/**/*.ts' --log-level silent",
     "build": "tsc --build",
     "prepublish": "npm run lint && npm run build && npm run doc",
-    "doc": "ts2md"
+    "doc": "ts2md",
+    "keygen": "npm run build && npx tsx src/generateKey.ts",
+    "test:py": "npm run build && jest --testPathPattern=brc100.py.test.ts",
+    "test:py:live": "npm run build && LIVE=true jest --testPathPattern=brc100.py.test.ts"
   },
   "bugs": {
     "url": "https://github.com/bsv-blockchain/wallet-toolbox/issues"

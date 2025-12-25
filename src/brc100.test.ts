@@ -75,33 +75,42 @@ describe('BRC-100 Wallet Operations', () => {
     } catch (error: any) {
       walletServiceAvailable = false
       const errorMessage = error?.message || String(error)
-      
-      if (errorMessage.includes('fetch failed') || errorMessage.includes('ECONNREFUSED') || errorMessage.includes('Network error')) {
+
+      if (
+        errorMessage.includes('fetch failed') ||
+        errorMessage.includes('ECONNREFUSED') ||
+        errorMessage.includes('Network error')
+      ) {
         console.error(
-          '\n' + '='.repeat(80) + '\n' +
-          '⚠️  WALLET SERVICE NOT AVAILABLE\n' +
-          '='.repeat(80) + '\n' +
-          `\nThe wallet infrastructure service is not running at ${endpointUrl}\n` +
-          '\nTo run these tests, you need to start the wallet-infra service.\n' +
-          '\nYou can use the wallet-infra repository to start the service:\n' +
-          '  1. Navigate to the wallet-infra directory:\n' +
-          '     cd ../wallet-infra\n' +
-          '  2. Start the service using Docker Compose:\n' +
-          '     docker compose up --build\n' +
-          '\nAlternatively, you can use wallet-infra-bsva:\n' +
-          '     cd ../wallet-infra-bsva\n' +
-          '     docker compose up --build\n' +
-          '\nThe service should be available at http://localhost:8080\n' +
-          '\nFor more details, see:\n' +
-          '  - wallet-infra/guides/local_development.md\n' +
-          '  - wallet-infra-bsva/guides/local_development.md\n' +
-          '\n' + '='.repeat(80) + '\n'
+          '\n' +
+            '='.repeat(80) +
+            '\n' +
+            '⚠️  WALLET SERVICE NOT AVAILABLE\n' +
+            '='.repeat(80) +
+            '\n' +
+            `\nThe wallet infrastructure service is not running at ${endpointUrl}\n` +
+            '\nTo run these tests, you need to start the wallet-infra service.\n' +
+            '\nYou can use the wallet-infra repository to start the service:\n' +
+            '  1. Navigate to the wallet-infra directory:\n' +
+            '     cd ../wallet-infra\n' +
+            '  2. Start the service using Docker Compose:\n' +
+            '     docker compose up --build\n' +
+            '\nAlternatively, you can use wallet-infra-bsva:\n' +
+            '     cd ../wallet-infra-bsva\n' +
+            '     docker compose up --build\n' +
+            '\nThe service should be available at http://localhost:8080\n' +
+            '\nFor more details, see:\n' +
+            '  - wallet-infra/guides/local_development.md\n' +
+            '  - wallet-infra-bsva/guides/local_development.md\n' +
+            '\n' +
+            '='.repeat(80) +
+            '\n'
         )
-        
+
         // Exit early to prevent running all tests
         process.exit(1)
       }
-      
+
       // Re-throw other errors
       throw error
     }

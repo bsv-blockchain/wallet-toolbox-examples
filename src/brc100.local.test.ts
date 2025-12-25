@@ -13,7 +13,6 @@ function createSQLiteKnex(filename: string): Knex {
   return knex
 }
 
-
 /**
  * Track nosend transaction references for cleanup.
  * Tests that create nosend transactions should add their references here.
@@ -24,7 +23,6 @@ const pendingAborts: string[] = []
  * Track knex connections for cleanup.
  */
 let knexConnections: any[] = []
-
 
 describe('BRC-100 Wallet Operations', () => {
   let setup: SetupWallet
@@ -64,11 +62,16 @@ describe('BRC-100 Wallet Operations', () => {
       const errorMessage = error?.message || String(error)
 
       console.error(
-        '\n' + '='.repeat(80) + '\n' +
-        '⚠️  LOCAL STORAGE SETUP FAILED\n' +
-        '='.repeat(80) + '\n' +
-        `\nFailed to set up local SQLite storage: ${errorMessage}\n` +
-        '\n' + '='.repeat(80) + '\n'
+        '\n' +
+          '='.repeat(80) +
+          '\n' +
+          '⚠️  LOCAL STORAGE SETUP FAILED\n' +
+          '='.repeat(80) +
+          '\n' +
+          `\nFailed to set up local SQLite storage: ${errorMessage}\n` +
+          '\n' +
+          '='.repeat(80) +
+          '\n'
       )
 
       // Exit early to prevent running all tests
@@ -182,7 +185,9 @@ describe('BRC-100 Wallet Operations', () => {
         counterparty: 'self'
       })
 
-      console.log(`🔑 Derived public key: ${result.publicKey.substring(0, 20)}...`)
+      console.log(
+        `🔑 Derived public key: ${result.publicKey.substring(0, 20)}...`
+      )
       expect(result).toBeDefined()
       expect(result.publicKey).toBeDefined()
       expect(typeof result.publicKey).toBe('string')
@@ -201,7 +206,9 @@ describe('BRC-100 Wallet Operations', () => {
         keyID: '1',
         counterparty: 'self'
       })
-      console.log(`✍️  Created signature: ${Buffer.from(result.signature.slice(0, 10)).toString('hex')}...`)
+      console.log(
+        `✍️  Created signature: ${Buffer.from(result.signature.slice(0, 10)).toString('hex')}...`
+      )
       expect(result).toBeDefined()
       expect(result.signature).toBeDefined()
       console.log('✅ Signature creation test completed')
@@ -289,7 +296,9 @@ describe('BRC-100 Wallet Operations', () => {
         counterparty: 'self'
       })
 
-      console.log(`🔐 Generated HMAC: ${Buffer.from(result.hmac.slice(0, 10)).toString('hex')}...`)
+      console.log(
+        `🔐 Generated HMAC: ${Buffer.from(result.hmac.slice(0, 10)).toString('hex')}...`
+      )
       expect(result).toBeDefined()
       expect(result.hmac).toBeDefined()
       console.log('✅ HMAC creation test completed')
@@ -337,7 +346,9 @@ describe('BRC-100 Wallet Operations', () => {
         counterparty: 'self'
       })
 
-      console.log(`🔒 Encrypted message: ${Buffer.from(encryptResult.ciphertext.slice(0, 10)).toString('hex')}...`)
+      console.log(
+        `🔒 Encrypted message: ${Buffer.from(encryptResult.ciphertext.slice(0, 10)).toString('hex')}...`
+      )
       expect(encryptResult).toBeDefined()
       expect(encryptResult.ciphertext).toBeDefined()
 
@@ -401,24 +412,30 @@ describe('BRC-100 Wallet Operations', () => {
           }
         })
 
-        console.log(`✅ Action created with ${action.signableTransaction ? 'signableTransaction' : action.txid ? 'txid' : 'unknown'}`)
+        console.log(
+          `✅ Action created with ${action.signableTransaction ? 'signableTransaction' : action.txid ? 'txid' : 'unknown'}`
+        )
         if (action.signableTransaction?.reference) {
-          console.log(`   Action reference: ${action.signableTransaction.reference}`)
+          console.log(
+            `   Action reference: ${action.signableTransaction.reference}`
+          )
         }
         expect(action).toBeDefined()
 
         // With noSend, wallet may return signableTransaction (needs signing) or txid (auto-signed)
         if (action.signableTransaction?.reference) {
-        // Can abort - add to cleanup list and abort immediately
-        console.log(`🗑️  Aborting action: ${action.signableTransaction.reference}`)
-        pendingAborts.push(action.signableTransaction.reference)
-        const abortResult = await setup.wallet.abortAction({
-          reference: action.signableTransaction.reference
-        })
-        console.log(`✅ Action aborted: ${abortResult.aborted}`)
-        expect(abortResult.aborted).toBe(true)
-        // Remove from pending since we aborted it
-        pendingAborts.pop()
+          // Can abort - add to cleanup list and abort immediately
+          console.log(
+            `🗑️  Aborting action: ${action.signableTransaction.reference}`
+          )
+          pendingAborts.push(action.signableTransaction.reference)
+          const abortResult = await setup.wallet.abortAction({
+            reference: action.signableTransaction.reference
+          })
+          console.log(`✅ Action aborted: ${abortResult.aborted}`)
+          expect(abortResult.aborted).toBe(true)
+          // Remove from pending since we aborted it
+          pendingAborts.pop()
         }
         // else: auto-signed nosend tx - cleanup handles it
       } catch (err: any) {
@@ -462,14 +479,18 @@ describe('BRC-100 Wallet Operations', () => {
           }
         })
 
-        console.log(`✅ Structure test action created with ${action.signableTransaction ? 'signableTransaction' : action.txid ? 'txid' : 'unknown'}`)
+        console.log(
+          `✅ Structure test action created with ${action.signableTransaction ? 'signableTransaction' : action.txid ? 'txid' : 'unknown'}`
+        )
         expect(action).toBeDefined()
 
         // Verify result structure - either signableTransaction or txid
         if (action.signableTransaction) {
           expect(action.signableTransaction.reference).toBeDefined()
           expect(action.signableTransaction.tx).toBeDefined()
-          console.log(`📝 Keeping action ${action.signableTransaction.reference} for database verification`)
+          console.log(
+            `📝 Keeping action ${action.signableTransaction.reference} for database verification`
+          )
           // Keep this action for the listActions test to find it
           // Don't abort immediately - will be cleaned up in afterAll
         } else if (action.txid) {
@@ -489,7 +510,9 @@ describe('BRC-100 Wallet Operations', () => {
     }, 15000)
 
     test('listActions - should list recent wallet actions', async () => {
-      console.log('🔍 Checking for actions in database before action creation tests...')
+      console.log(
+        '🔍 Checking for actions in database before action creation tests...'
+      )
       const actions = await setup.wallet.listActions({
         labels: [],
         limit: 10,
@@ -515,7 +538,9 @@ describe('BRC-100 Wallet Operations', () => {
         a => a.status === 'unsigned' || a.status === 'nosend'
       )
 
-      console.log(`📋 Found ${actions.actions.length} total actions, ${unsignedAction ? 1 : 0} unsigned`)
+      console.log(
+        `📋 Found ${actions.actions.length} total actions, ${unsignedAction ? 1 : 0} unsigned`
+      )
       // listActions doesn't return references, so we can only abort
       // actions we created in the same session with signableTransaction
       expect(unsignedAction === undefined || unsignedAction.status).toBeTruthy()
@@ -535,7 +560,9 @@ describe('BRC-100 Wallet Operations', () => {
         offset: 0
       })
 
-      console.log(`💰 Listed ${outputs.outputs.length} outputs from database (total: ${outputs.totalOutputs})`)
+      console.log(
+        `💰 Listed ${outputs.outputs.length} outputs from database (total: ${outputs.totalOutputs})`
+      )
       if (outputs.outputs.length > 0) {
         console.log(`   First output: ${outputs.outputs[0].satoshis} sats`)
       }
@@ -563,7 +590,9 @@ describe('BRC-100 Wallet Operations', () => {
         expect(result).toBeDefined()
         expect(result.relinquished).toBeDefined()
       } catch (err: any) {
-        console.log('⚠️  Output relinquishment failed (expected with dummy outpoint)')
+        console.log(
+          '⚠️  Output relinquishment failed (expected with dummy outpoint)'
+        )
         // Expected to fail with dummy outpoint
         expect(err).toBeDefined()
       }
@@ -593,7 +622,9 @@ describe('BRC-100 Wallet Operations', () => {
         console.log('📜 Certificate acquired successfully')
         expect(result).toBeDefined()
       } catch (err: any) {
-        console.log('⚠️  Certificate acquisition failed (expected in local test environment)')
+        console.log(
+          '⚠️  Certificate acquisition failed (expected in local test environment)'
+        )
         // Expected to fail in test environment
         expect(err).toBeDefined()
       }
@@ -608,9 +639,13 @@ describe('BRC-100 Wallet Operations', () => {
         offset: 0
       })
 
-      console.log(`📜 Listed ${certs.certificates.length} certificates from database`)
+      console.log(
+        `📜 Listed ${certs.certificates.length} certificates from database`
+      )
       if (certs.certificates.length > 0) {
-        console.log(`   Certificate types: ${certs.certificates.map(c => c.type).join(', ')}`)
+        console.log(
+          `   Certificate types: ${certs.certificates.map(c => c.type).join(', ')}`
+        )
       }
 
       expect(certs).toBeDefined()
@@ -637,7 +672,9 @@ describe('BRC-100 Wallet Operations', () => {
         offset: 0
       })
 
-      console.log(`📜 Found ${certs.certificates.length} certificates to potentially relinquish`)
+      console.log(
+        `📜 Found ${certs.certificates.length} certificates to potentially relinquish`
+      )
       if (certs.certificates.length === 0) {
         console.log('⚠️  No certificates to relinquish, skipping test')
         return
@@ -655,7 +692,9 @@ describe('BRC-100 Wallet Operations', () => {
         })
         console.log('✅ Certificate relinquished successfully')
       } catch (err: any) {
-        console.log('⚠️  Certificate relinquishment failed (expected in test environment)')
+        console.log(
+          '⚠️  Certificate relinquishment failed (expected in test environment)'
+        )
         // Expected to fail in test environment
         expect(err).toBeDefined()
       }
@@ -678,13 +717,17 @@ describe('BRC-100 Wallet Operations', () => {
           seekPermission: true
         })
 
-        console.log(`🔍 Found ${result.certificates.length} certificates by identity key`)
+        console.log(
+          `🔍 Found ${result.certificates.length} certificates by identity key`
+        )
         expect(result).toBeDefined()
         expect(result.certificates).toBeDefined()
         expect(Array.isArray(result.certificates)).toBe(true)
         console.log('✅ Identity discovery by identity key completed')
       } catch (err: any) {
-        console.log('⚠️  Identity discovery by identity key failed (expected in local test environment)')
+        console.log(
+          '⚠️  Identity discovery by identity key failed (expected in local test environment)'
+        )
         // Expected to fail in test environment
         expect(err).toBeDefined()
       }
@@ -699,13 +742,17 @@ describe('BRC-100 Wallet Operations', () => {
           offset: 0
         })
 
-        console.log(`🔍 Found ${result.certificates.length} certificates by attributes`)
+        console.log(
+          `🔍 Found ${result.certificates.length} certificates by attributes`
+        )
         expect(result).toBeDefined()
         expect(result.certificates).toBeDefined()
         expect(Array.isArray(result.certificates)).toBe(true)
         console.log('✅ Identity discovery by attributes completed')
       } catch (err: any) {
-        console.log('⚠️  Identity discovery by attributes failed (expected in local test environment)')
+        console.log(
+          '⚠️  Identity discovery by attributes failed (expected in local test environment)'
+        )
         // Expected to fail in test environment
         expect(err).toBeDefined()
       }
@@ -741,7 +788,9 @@ describe('BRC-100 Wallet Operations', () => {
         console.log('✅ Transaction internalized successfully')
         expect(result).toBeDefined()
       } catch (err: any) {
-        console.log('⚠️  Transaction internalization failed (expected with dummy data)')
+        console.log(
+          '⚠️  Transaction internalization failed (expected with dummy data)'
+        )
         // Expected to fail with dummy data
         expect(err).toBeDefined()
       }
