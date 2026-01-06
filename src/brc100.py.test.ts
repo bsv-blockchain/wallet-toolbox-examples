@@ -38,36 +38,36 @@ async function buildAtomicBeefFromRawTx(
   atomicBeef: number[]
   txid: string
 }> {
-  console.log(`🔍 Parsing raw transaction (${rawTxHex.length} chars)...`)
+  // console.log(`🔍 Parsing raw transaction (${rawTxHex.length} chars)...`)
 
   // Parse the raw transaction to get txid
   const tx = Transaction.fromHex(rawTxHex)
   const txid = tx.id('hex')
 
-  console.log(`✅ Transaction parsed`)
-  console.log(`   TXID: ${txid}`)
-  console.log(`   Inputs: ${tx.inputs.length}, Outputs: ${tx.outputs.length}`)
+  // console.log(`✅ Transaction parsed`)
+  // console.log(`   TXID: ${txid}`)
+  //console.log(`   Inputs: ${tx.inputs.length}, Outputs: ${tx.outputs.length}`)
 
   // Use Services.getBeefForTxid() to build a valid BEEF
   // This method handles all the complexity of fetching parent transactions
   // and merkle proofs recursively to build a valid BEEF
-  console.log(`🔍 Building BEEF using Services.getBeefForTxid()...`)
+  // console.log(`🔍 Building BEEF using Services.getBeefForTxid()...`)
   const services = new Services(chain)
 
   try {
     const beef = await services.getBeefForTxid(txid)
 
-    console.log(`✅ BEEF built successfully`)
-    console.log(`   ${beef.toLogString()}`)
+    // console.log(`✅ BEEF built successfully`)
+    // console.log(`   ${beef.toLogString()}`)
 
     // Convert to Atomic BEEF binary format
     const atomicBeef = beef.toBinaryAtomic(txid)
-    console.log(`   Size: ${atomicBeef.length} bytes`)
+    // console.log(`   Size: ${atomicBeef.length} bytes`)
 
     return { atomicBeef, txid }
   } catch (error: any) {
-    console.log(`⚠️  Failed to build BEEF using Services.getBeefForTxid(): ${error.message}`)
-    console.log(`   Falling back to manual BEEF building...`)
+    // console.log(`⚠️  Failed to build BEEF using Services.getBeefForTxid(): ${error.message}`)
+    // console.log(`   Falling back to manual BEEF building...`)
 
     // Fallback: Build a simple BEEF with just the transaction
     // This may fail validation if the transaction is unconfirmed
@@ -78,17 +78,17 @@ async function buildAtomicBeefFromRawTx(
       const merkleResult = await services.getMerklePath(txid)
       if (merkleResult && merkleResult.merklePath) {
         tx.merklePath = merkleResult.merklePath
-        console.log(`✅ Merkle proof found (height: ${merkleResult.merklePath.blockHeight})`)
+        // console.log(`✅ Merkle proof found (height: ${merkleResult.merklePath.blockHeight})`)
       }
     } catch (error: any) {
-      console.log(`⚠️  No merkle proof found - transaction may be unconfirmed`)
+      // console.log(`⚠️  No merkle proof found - transaction may be unconfirmed`)
     }
 
     beef.mergeTransaction(tx)
     const atomicBeef = beef.toBinaryAtomic(txid)
 
-    console.log(`⚠️  Built fallback BEEF (may not be valid)`)
-    console.log(`   BEEF contains ${beef.txs.length} transactions and ${beef.bumps.length} BUMPS`)
+    // console.log(`⚠️  Built fallback BEEF (may not be valid)`)
+    // console.log(`   BEEF contains ${beef.txs.length} transactions and ${beef.bumps.length} BUMPS`)
 
     return { atomicBeef, txid }
   }
@@ -107,11 +107,11 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
     let rootKeyHex: string
     if (isLiveMode && process.env.LIVE_PRIVATE_KEY) {
       rootKeyHex = process.env.LIVE_PRIVATE_KEY
-      console.log('🔥 LIVE MODE ENABLED - Using funded testnet key')
-      console.log('⚠️  WARNING: This will broadcast real transactions!')
+      // console.log('🔥 LIVE MODE ENABLED - Using funded testnet key')
+      // console.log('⚠️  WARNING: This will broadcast real transactions!')
     } else {
       rootKeyHex = env.devKeys[env.identityKey]
-      console.log('🧪 TEST MODE - Using development keys')
+      // console.log('🧪 TEST MODE - Using development keys')
     }
 
     try {
@@ -259,7 +259,7 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
               }
 
               const unspentData = await unspentResponse.json()
-              console.log(`📊 Found ${unspentData.length} unspent output(s) at funding address`)
+              // console.log(`📊 Found ${unspentData.length} unspent output(s) at funding address`)
 
               if (unspentData.length > 0) {
                 // Get the first unspent output (or we could process all of them)
@@ -273,7 +273,7 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
                 // Show Whatsonchain link for the funding transaction
                 const wocNetwork = setup.chain === 'main' ? '' : 'test.'
                 const fundingTxUrl = `https://${wocNetwork}whatsonchain.com/tx/${txid}`
-                console.log(`🔗 View funding transaction on Whatsonchain: ${fundingTxUrl}`)
+                // console.log(`🔗 View funding transaction on Whatsonchain: ${fundingTxUrl}`)
 
                 // Get the raw transaction hex
                 const txResponse = await fetch(`${wocBaseUrl}/tx/${txid}/hex`)
@@ -299,15 +299,15 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
                 const actualLockingScript = output.lockingScript.toHex()
                 const expectedLockingScriptHex = expectedLockingScript.toHex()
 
-                console.log(`   Output ${outputIndex} locking script: ${actualLockingScript}`)
-                console.log(`   Expected locking script: ${expectedLockingScriptHex}`)
+                // console.log(`   Output ${outputIndex} locking script: ${actualLockingScript}`)
+                // console.log(`   Expected locking script: ${expectedLockingScriptHex}`)
 
                 if (actualLockingScript !== expectedLockingScriptHex) {
                   console.log(`⚠️  Warning: Output ${outputIndex} locking script does not match funding address`)
                   console.log(`   This output may not be a BRC-29 wallet payment - it might be a regular P2PKH`)
                   // Continue anyway - might be a different output format
                 } else {
-                  console.log(`✅ Output ${outputIndex} locking script matches funding address`)
+                  // console.log(`✅ Output ${outputIndex} locking script matches funding address`)
                 }
 
                 // Build Atomic BEEF using the helper function
@@ -323,13 +323,13 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
                     senderIdentityKey: anyoneKeyHex // Use AnyoneKey (external sender, like faucet)
                   }
 
-                  console.log(`   Payment remittance:`, {
-                    derivationPrefix: paymentRemittance.derivationPrefix,
-                    derivationSuffix: paymentRemittance.derivationSuffix,
-                    derivationPrefixDecoded: Buffer.from(paymentRemittance.derivationPrefix, 'base64').toString('utf-8'),
-                    derivationSuffixDecoded: Buffer.from(paymentRemittance.derivationSuffix, 'base64').toString('utf-8'),
-                    senderIdentityKey: paymentRemittance.senderIdentityKey.substring(0, 20) + '... (AnyoneKey)'
-                  })
+                  // console.log(`   Payment remittance:`, {
+                  //   derivationPrefix: paymentRemittance.derivationPrefix,
+                  //   derivationSuffix: paymentRemittance.derivationSuffix,
+                  //   derivationPrefixDecoded: Buffer.from(paymentRemittance.derivationPrefix, 'base64').toString('utf-8'),
+                  //   derivationSuffixDecoded: Buffer.from(paymentRemittance.derivationSuffix, 'base64').toString('utf-8'),
+                  //   senderIdentityKey: paymentRemittance.senderIdentityKey.substring(0, 20) + '... (AnyoneKey)'
+                  // })
 
                   // Internalize as "wallet payment" protocol (matches Python example)
                   // Python example always uses "wallet payment" protocol with paymentRemittance
@@ -345,12 +345,12 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
                     description: 'Auto-internalize funding transaction'
                   })
 
-                  console.log('✅ Successfully internalized as wallet payment')
+                  // console.log('✅ Successfully internalized as wallet payment')
 
                   if (internalizeResult) {
-                    console.log(`✅ Successfully internalized funding transaction`)
-                    console.log(`   Accepted: ${internalizeResult.accepted}`)
-                    console.log(`   TXID: ${txid}`)
+                    // console.log(`✅ Successfully internalized funding transaction`)
+                    // console.log(`   Accepted: ${internalizeResult.accepted}`)
+                    // console.log(`   TXID: ${txid}`)
 
                     // Show Whatsonchain link
                     const wocNetwork = setup.chain === 'main' ? '' : 'test.'
@@ -359,25 +359,25 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
 
                     // Check balance again after internalization
                     const newBalance = await setup.wallet.balance()
-                    console.log(`💰 New balance after internalization: ${newBalance} satoshis`)
+                    // console.log(`💰 New balance after internalization: ${newBalance} satoshis`)
                   }
                 } catch (internalizeErr: any) {
                   // Final fallback - log and continue
-                  console.log('⚠️  Could not internalize transaction:', internalizeErr.message)
+                  // console.log('⚠️  Could not internalize transaction:', internalizeErr.message)
 
                   if (internalizeErr.message.includes('BRC-29') || internalizeErr.message.includes('locking script')) {
-                    console.log('   The output is a regular P2PKH (not created with BRC-29)')
-                    console.log('   The wallet may still be able to spend it if it can derive the private key')
+                    // console.log('   The output is a regular P2PKH (not created with BRC-29)')
+                    // console.log('   The wallet may still be able to spend it if it can derive the private key')
                   } else if (internalizeErr.message.includes('AtomicBEEF')) {
-                    console.log('   The BEEF may be missing merkle proofs (BUMPS)')
-                    console.log('   This is expected when fetching transactions from external APIs')
+                    // console.log('   The BEEF may be missing merkle proofs (BUMPS)')
+                    // console.log('   This is expected when fetching transactions from external APIs')
                   }
 
-                  console.log('   This is best-effort automatic funding - continuing without internalization')
+                  // console.log('   This is best-effort automatic funding - continuing without internalization')
                   // Continue without exiting - this is best-effort automatic funding
                 }
               } else {
-                console.log('ℹ️  No unspent outputs found at funding address')
+                // console.log('ℹ️  No unspent outputs found at funding address')
                 exit(-1)
               }
             } catch (apiErr: any) {
@@ -390,11 +390,11 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
           }
         }
       } catch (err: any) {
-        console.log('⚠️  Balance check failed (expected for local testing)')
+        // console.log('⚠️  Balance check failed (expected for local testing)')
         if (isLiveMode) {
-          console.log(
-            '   This may indicate services are not configured for live testing.'
-          )
+          // console.log(
+          //   '   This may indicate services are not configured for live testing.'
+          // )
         }
         // Balance might fail if services not configured, but that's expected
       }
@@ -402,43 +402,43 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
     }, 10000)
 
     test('waitForAuthentication - should resolve immediately for base wallet', async () => {
-      console.log('🔐 Testing waitForAuthentication...')
+      // console.log('🔐 Testing waitForAuthentication...')
       const result = await setup.wallet.waitForAuthentication({})
-      console.log(`🔐 Authentication result: ${JSON.stringify(result)}`)
+      // console.log(`🔐 Authentication result: ${JSON.stringify(result)}`)
       expect(result).toBeDefined()
       expect(result.authenticated).toBeDefined()
       // Base wallet resolves immediately
-      console.log('✅ waitForAuthentication test completed')
+      // console.log('✅ waitForAuthentication test completed')
     }, 10000)
 
     test('isAuthenticated - should check if wallet is authenticated', async () => {
-      console.log('🔐 Testing isAuthenticated...')
+      // console.log('🔐 Testing isAuthenticated...')
       const result = await setup.wallet.isAuthenticated({})
-      console.log(`🔐 Authentication check result: ${JSON.stringify(result)}`)
+      // console.log(`🔐 Authentication check result: ${JSON.stringify(result)}`)
       expect(result).toBeDefined()
       expect(result.authenticated).toBeDefined()
       expect(typeof result.authenticated).toBe('boolean')
-      console.log('✅ isAuthenticated test completed')
+      // console.log('✅ isAuthenticated test completed')
     }, 10000)
 
     test('getNetwork - should return the network information', async () => {
-      console.log('🌐 Testing getNetwork...')
+      // console.log('🌐 Testing getNetwork...')
       const result = await setup.wallet.getNetwork({})
-      console.log(`🌐 Network info: ${JSON.stringify(result)}`)
+      // console.log(`🌐 Network info: ${JSON.stringify(result)}`)
       expect(result).toBeDefined()
       expect(result.network).toBeDefined()
       expect(['main', 'test', 'testnet']).toContain(result.network)
-      console.log('✅ getNetwork test completed')
+      // console.log('✅ getNetwork test completed')
     }, 10000)
 
     test('getVersion - should return wallet version information', async () => {
-      console.log('📦 Testing getVersion...')
+      // console.log('📦 Testing getVersion...')
       const result = await setup.wallet.getVersion({})
-      console.log(`📦 Version info: ${JSON.stringify(result)}`)
+      // console.log(`📦 Version info: ${JSON.stringify(result)}`)
       expect(result).toBeDefined()
       expect(result.version).toBeDefined()
       expect(typeof result.version).toBe('string')
-      console.log('✅ getVersion test completed')
+      // console.log('✅ getVersion test completed')
     }, 10000)
   })
 
@@ -448,7 +448,7 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
 
   describe('Keys and Signatures', () => {
     test('getPublicKey - should derive protocol-specific public key', async () => {
-      console.log('🔑 Testing public key derivation...')
+      // console.log('🔑 Testing public key derivation...')
       const result = await setup.wallet.getPublicKey({
         identityKey: true,
         protocolID: [0, 'testprotocol'],
@@ -456,18 +456,18 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
         counterparty: 'self'
       })
 
-      console.log(
-        `🔑 Derived public key: ${result.publicKey.substring(0, 20)}...`
-      )
+      // console.log(
+      //   `🔑 Derived public key: ${result.publicKey.substring(0, 20)}...`
+      // )
       expect(result).toBeDefined()
       expect(result.publicKey).toBeDefined()
       expect(typeof result.publicKey).toBe('string')
       expect(result.publicKey.length).toBeGreaterThan(60) // Public key length
-      console.log('✅ Public key test completed')
+      // console.log('✅ Public key test completed')
     }, 10000)
 
     test('createSignature - should sign data with wallet keys', async () => {
-      console.log('✍️  Testing signature creation...')
+      // console.log('✍️  Testing signature creation...')
       const testMessage = 'Hello, BSV!'
       const data = Array.from(Buffer.from(testMessage))
 
@@ -477,16 +477,16 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
         keyID: '1',
         counterparty: 'self'
       })
-      console.log(
-        `✍️  Created signature: ${Buffer.from(result.signature.slice(0, 10)).toString('hex')}...`
-      )
+      // console.log(
+      //   `✍️  Created signature: ${Buffer.from(result.signature.slice(0, 10)).toString('hex')}...`
+      // )
       expect(result).toBeDefined()
       expect(result.signature).toBeDefined()
-      console.log('✅ Signature creation test completed')
+      // console.log('✅ Signature creation test completed')
     }, 10000)
 
     test('verifySignature - should create and verify signature round-trip', async () => {
-      console.log('🔍 Testing signature verification...')
+      // console.log('🔍 Testing signature verification...')
       const testMessage = 'Test signature verification'
       const data = Array.from(Buffer.from(testMessage))
 
@@ -507,10 +507,10 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
         counterparty: 'self'
       })
 
-      console.log(`🔍 Signature verification result: ${verifyResult.valid}`)
+      // console.log(`🔍 Signature verification result: ${verifyResult.valid}`)
       expect(verifyResult).toBeDefined()
       expect(verifyResult.valid).toBe(true)
-      console.log('✅ Signature verification test completed')
+      // console.log('✅ Signature verification test completed')
     }, 10000)
 
     test('revealCounterpartyKeyLinkage - should reveal counterparty key linkage', async () => {
@@ -556,7 +556,7 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
 
   describe('Crypto Operations', () => {
     test('createHmac - should generate HMAC for message', async () => {
-      console.log('🔐 Testing HMAC creation...')
+      // console.log('🔐 Testing HMAC creation...')
       const testMessage = 'Hello, HMAC!'
       const data = Array.from(Buffer.from(testMessage))
 
@@ -567,16 +567,16 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
         counterparty: 'self'
       })
 
-      console.log(
-        `🔐 Generated HMAC: ${Buffer.from(result.hmac.slice(0, 10)).toString('hex')}...`
-      )
+      // console.log(
+      //   `🔐 Generated HMAC: ${Buffer.from(result.hmac.slice(0, 10)).toString('hex')}...`
+      // )
       expect(result).toBeDefined()
       expect(result.hmac).toBeDefined()
-      console.log('✅ HMAC creation test completed')
+      // console.log('✅ HMAC creation test completed')
     }, 10000)
 
     test('verifyHmac - should create and verify HMAC round-trip', async () => {
-      console.log('🔍 Testing HMAC verification...')
+      // console.log('🔍 Testing HMAC verification...')
       const testMessage = 'Test HMAC verification'
       const data = Array.from(Buffer.from(testMessage))
 
@@ -597,15 +597,15 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
         counterparty: 'self'
       })
 
-      console.log(`🔍 HMAC verification result: ${verifyResult.valid}`)
-      console.log('✅ HMAC verification test completed')
+      // console.log(`🔍 HMAC verification result: ${verifyResult.valid}`)
+      // console.log('✅ HMAC verification test completed')
       expect(verifyResult).toBeDefined()
       expect(verifyResult.valid).toBe(true)
-      console.log('✅ HMAC verification test completed')
+      // console.log('✅ HMAC verification test completed')
     }, 10000)
 
     test('encrypt/decrypt - should encrypt data and decrypt it back', async () => {
-      console.log('🔒 Testing encryption/decryption...')
+      // console.log('🔒 Testing encryption/decryption...')
       const testMessage = 'Secret Message!'
       const plaintext = Array.from(Buffer.from(testMessage))
 
@@ -617,9 +617,9 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
         counterparty: 'self'
       })
 
-      console.log(
-        `🔒 Encrypted message: ${Buffer.from(encryptResult.ciphertext.slice(0, 10)).toString('hex')}...`
-      )
+      // console.log(
+      //   `🔒 Encrypted message: ${Buffer.from(encryptResult.ciphertext.slice(0, 10)).toString('hex')}...`
+      // )
       expect(encryptResult).toBeDefined()
       expect(encryptResult.ciphertext).toBeDefined()
 
@@ -637,9 +637,9 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
 
       // Verify decrypted message matches original
       const decrypted = Buffer.from(decryptResult.plaintext).toString()
-      console.log(`🔓 Decrypted message: "${decrypted}"`)
+      // console.log(`🔓 Decrypted message: "${decrypted}"`)
       expect(decrypted).toBe(testMessage)
-      console.log('✅ Encryption/decryption test completed')
+      // console.log('✅ Encryption/decryption test completed')
     }, 10000)
   })
 
@@ -649,14 +649,14 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
 
   describe('Actions', () => {
     test('createAction - should create OP_RETURN transaction (noSend + abort)', async () => {
-      console.log(`Starting createAction test ${isLiveMode ? '(LIVE)' : '(test mode)'}`)
+      // console.log(`Starting createAction test ${isLiveMode ? '(LIVE)' : '(test mode)'}`)
 
       // Check balance first - need at least 10 sats to safely run this test
       // For externally-funded outputs, also check the 'funding' basket
       let balance = 0
       try {
         balance = await setup.wallet.balance()
-        console.log({ balance })
+        // console.log({ balance })
 
       } catch (err) {
         console.log('⚠️  Could not check balance - assuming 0')
@@ -665,10 +665,10 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
       const requiredBalance = 10
       if (balance < requiredBalance) {
         if (isLiveMode) {
-          console.log(
-            `❌ LIVE MODE: Insufficient balance (${balance} < ${requiredBalance} sats)`
-          )
-          console.log('   Fund your wallet before running live tests.')
+          // console.log(
+          //   `❌ LIVE MODE: Insufficient balance (${balance} < ${requiredBalance} sats)`
+          // )
+          // console.log('   Fund your wallet before running live tests.')
           throw new Error('Insufficient funds for live testing')
         } else {
           console.log('⚠️  Skipping test - insufficient balance')
@@ -701,7 +701,7 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
           // When acceptDelayedBroadcast is false, unsuccessful results throw WERR_REVIEW_ACTIONS
           // Extract the results from the error and treat as action result
           if (error.name === 'WERR_REVIEW_ACTIONS' || error.message?.includes('require review')) {
-            console.log('⚠️  Action requires review (undelayed mode)')
+            // console.log('⚠️  Action requires review (undelayed mode)')
             action = {
               txid: error.txid,
               tx: error.tx,
@@ -709,7 +709,7 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
               reviewActionResults: error.reviewActionResults || [],
               noSendChange: error.noSendChange
             }
-            console.dir(action, { depth: null })
+            // console.dir(action, { depth: null })
             
             // Log review results
             if (action.reviewActionResults && action.reviewActionResults.length > 0) {
@@ -765,7 +765,7 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
               const network = chain === 'main' ? '' : 'test.'
               const whatsonchainUrl = `https://${network}whatsonchain.com/tx/${result.txid}`
               console.log(`🔗 View transaction ${result.txid} on Whatsonchain: ${whatsonchainUrl}`)
-              console.log(`   Status: ${result.status}`)
+              // console.log(`   Status: ${result.status}`)
             }
 
             // Only fail the test if the transaction actually failed to broadcast
@@ -791,7 +791,7 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
       let balance = 0
       try {
         balance = await setup.wallet.balance()
-        console.log(`💰 Current balance: ${balance} satoshis`)
+        // console.log(`💰 Current balance: ${balance} satoshis`)
       } catch (err) {
         console.log('⚠️  Could not check balance - assuming 0')
       }
@@ -834,9 +834,9 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
           throw err
         }
 
-        console.log(
-          `✅ Structure test action created with ${action.signableTransaction ? 'signableTransaction' : action.txid ? 'txid' : 'unknown'}`
-        )
+        // console.log(
+        //   `✅ Structure test action created with ${action.signableTransaction ? 'signableTransaction' : action.txid ? 'txid' : 'unknown'}`
+        // )
         expect(action).toBeDefined()
 
         if (shouldBroadcast) {
@@ -844,7 +844,7 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
           expect(action.txid).toBeDefined()
           expect(typeof action.txid).toBe('string')
           expect(action.txid!.length).toBe(64)
-          console.log(`📡 Transaction broadcasted! TXID: ${action.txid}`)
+          // console.log(`📡 Transaction broadcasted! TXID: ${action.txid}`)
           console.log(
             `🔗 View on explorer: https://test.whatsonchain.com/tx/${action.txid}`
           )
@@ -853,9 +853,9 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
           if (action.signableTransaction) {
             expect(action.signableTransaction.reference).toBeDefined()
             expect(action.signableTransaction.tx).toBeDefined()
-            console.log(
-              `📝 Keeping action ${action.signableTransaction.reference} for database verification`
-            )
+            // console.log(
+            //   `📝 Keeping action ${action.signableTransaction.reference} for database verification`
+            // )
             // Keep this action for the listActions test to find it
             // Don't abort immediately - will be cleaned up in afterAll
           } else if (action.txid) {
