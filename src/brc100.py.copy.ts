@@ -1,5 +1,5 @@
-import { PrivateKey, Transaction, MerklePath, P2PKH, Beef, PublicKey, BEEF_V2 } from '@bsv/sdk'
-import { Setup, SetupWallet, StorageClient, Services, Chain } from '@bsv/wallet-toolbox'
+import { PrivateKey, Transaction, MerklePath, P2PKH, Beef, PublicKey } from '@bsv/sdk'
+import { Setup, SetupWallet, StorageClient } from '@bsv/wallet-toolbox'
 import { exit } from 'process'
 
 /**
@@ -17,127 +17,6 @@ const pendingAborts: string[] = []
  * Global flag indicating if we're running in live test mode with funded wallet.
  */
 const isLiveMode = process.env.LIVE === 'true' || process.env.LIVE === '1'
-
-
-/**
- * Build Atomic BEEF from raw transaction hex.
- *
- * This helper function takes a raw transaction hex and:
- * 1. Parses the transaction to get txid
- * 2. Attempts to fetch merkle proof from Services (if mined)
- * 3. Builds Atomic BEEF format
- *
- * @param rawTxHex Raw transaction hex string
- * @param chain Network chain ('main' or 'test')
- * @returns Atomic BEEF binary data and txid
- */
-async function buildAtomicBeefFromRawTx(
-  rawTxHex: string,
-  chain: Chain
-): Promise<{
-  atomicBeef: number[]
-  txid: string
-}> {
-  console.log(`🔍 Parsing raw transaction (${rawTxHex.length} chars)...`)
-
-  // Parse the raw transaction
-  const tx = Transaction.fromHex(rawTxHex)
-  const txid = tx.id('hex')
-
-  console.log(`✅ Transaction parsed`)
-  console.log(`   TXID: ${txid}`)
-  console.log(`   Inputs: ${tx.inputs.length}, Outputs: ${tx.outputs.length}`)
-
-  // Create Atomic BEEF
-  const beef = new Beef(BEEF_V2)
-
-  // First, fetch and add all parent transactions (inputs' source transactions)
-  const parentTxs: Transaction[] = []
-
-  console.log(`🔍 Fetching parent transactions for ${tx.inputs.length} inputs...`)
-
-  // Use Whatsonchain API to fetch parent transactions (same as original code)
-  const wocNetwork = chain === 'main' ? 'main' : 'test'
-  const wocBaseUrl = `https://api.whatsonchain.com/v1/bsv/${wocNetwork}`
-
-  for (let i = 0; i < tx.inputs.length; i++) {
-    const input = tx.inputs[i]
-    const parentTxid = input.sourceTXID
-
-    console.log(`   Input ${i}: ${parentTxid} (vout: ${input.sourceOutputIndex})`)
-
-    try {
-      // Fetch the parent transaction using Whatsonchain API
-      const parentTxResponse = await fetch(`${wocBaseUrl}/tx/${parentTxid}/hex`)
-      if (!parentTxResponse.ok) {
-        throw new Error(`HTTP ${parentTxResponse.status}: ${parentTxResponse.statusText}`)
-      }
-      const parentTxHex = await parentTxResponse.text()
-      const parentTx = Transaction.fromHex(parentTxHex)
-      parentTxs.push(parentTx)
-      console.log(`   ✅ Fetched parent TX ${parentTxid}`)
-    } catch (error: any) {
-      console.log(`   ⚠️  Failed to fetch parent TX ${parentTxid}: ${error.message}`)
-      // Continue without this parent - the BEEF might still be usable for some validations
-    }
-  }
-
-  // Add parent transactions to BEEF first, with their merkle proofs if available
-  const services = new Services(chain)
-
-  for (const parentTx of parentTxs) {
-    const parentTxid = parentTx.id('hex')
-
-    // Try to get merkle proof for parent transaction
-    try {
-      console.log(`🔎 Looking up merkle proof for parent txid: ${parentTxid}...`)
-      const parentMerkleResult = await services.getMerklePath(parentTxid)
-      if (parentMerkleResult && parentMerkleResult.merklePath) {
-        parentTx.merklePath = parentMerkleResult.merklePath
-        console.log(`   ✅ Merkle proof found for parent (height: ${parentMerkleResult.merklePath.blockHeight})`)
-      } else {
-        console.log(`   ⚠️  No merkle proof found for parent - may be unconfirmed`)
-      }
-    } catch (error: any) {
-      console.log(`   ⚠️  Failed to fetch merkle proof for parent: ${error.message}`)
-    }
-
-    beef.mergeTransaction(parentTx)
-  }
-
-  console.log(`   Added ${parentTxs.length} parent transactions to BEEF`)
-
-  // Try to fetch merkle proof for the main transaction if it's mined
-  try {
-    console.log(`🔎 Looking up merkle proof for txid: ${txid}...`)
-
-    const merkleResult = await services.getMerklePath(txid)
-    console.log({ merkleResult })
-    if (merkleResult && merkleResult.merklePath) {
-      // Attach merkle path to transaction - mergeTransaction will handle it
-      tx.merklePath = merkleResult.merklePath
-      console.log(
-        `✅ Merkle proof found (height: ${merkleResult.merklePath.blockHeight})`
-      )
-    } else {
-      console.log(`⚠️  No merkle proof found - transaction may be unconfirmed`)
-    }
-  } catch (error: any) {
-    console.log(`⚠️  Failed to fetch merkle proof: ${error.message}`)
-  }
-
-  // Add main transaction to BEEF
-  beef.mergeTransaction(tx)
-
-  // Use toBinaryAtomic() to create proper Atomic BEEF format
-  const atomicBeef = beef.toBinaryAtomic(txid)
-
-  console.log(`✅ Atomic BEEF built successfully`)
-  console.log(`   BEEF contains ${beef.txs.length} transactions and ${beef.bumps.length} BUMPS`)
-  console.log(`   Size: ${atomicBeef.length} bytes`)
-
-  return { atomicBeef, txid }
-}
 
 describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
   let setup: SetupWallet
@@ -272,6 +151,13 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
         if (isLiveMode && balance === 0) {
           // Try to internalize funding automatically in live mode
           try {
+
+            // console.log('💰 Balance is 0, requesting derived key for external P2PKH funding...')
+
+            // Generate derivation prefix and suffix for BRC-29
+            // Match Python example: "faucet-prefix-01" / "faucet-suffix-01"
+            // IMPORTANT: These must be base64-encoded for the keyID used in getPublicKey
+            // because validation uses base64 strings directly (matches Go/TS behavior)
             const FAUCET_DERIVATION_PREFIX = "faucet-prefix-01"
             const FAUCET_DERIVATION_SUFFIX = "faucet-suffix-01"
             const derivationPrefixB64 = Buffer.from(FAUCET_DERIVATION_PREFIX, 'utf-8').toString('base64')
@@ -345,7 +231,7 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
 
                 const txHex = await txResponse.text()
                 // console.log(`📄 Retrieved raw transaction (${txHex.length / 2} bytes)`)
-                // TODO: replace things below with buildAtomicBeefFromRawTx
+
                 // Parse the transaction to verify the output
                 const txBytes = Array.from(Buffer.from(txHex, 'hex'))
                 const tx = Transaction.fromBinary(txBytes)
@@ -372,8 +258,134 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
                   console.log(`✅ Output ${outputIndex} locking script matches funding address`)
                 }
 
-                // Build Atomic BEEF using the helper function
-                const { atomicBeef, txid: beefTxid } = await buildAtomicBeefFromRawTx(txHex, setup.chain)
+                // Fetch merkle proof (BUMP) from Whatsonchain to build valid AtomicBEEF
+                console.log('🔍 Fetching merkle proof from Whatsonchain...')
+                let merklePath: MerklePath | null = null
+                try {
+                  const proofResponse = await fetch(`${wocBaseUrl}/tx/${txid}/proof/tsc`)
+                  console.log(`   Proof response status: ${proofResponse.status}`)
+                  
+                  if (proofResponse.ok) {
+                    const proofResponseData = await proofResponse.json()
+                    console.log(`   Proof response type:`, Array.isArray(proofResponseData) ? 'array' : typeof proofResponseData)
+                    console.log(`   Proof response data:`, JSON.stringify(proofResponseData, null, 2).substring(0, 500))
+                    if (proofResponseData !== null && typeof proofResponseData === 'object') {
+                      console.log(`   Proof response keys:`, Array.isArray(proofResponseData) ? `array[${proofResponseData.length}]` : Object.keys(proofResponseData))
+                    }
+                    
+                    // Whatsonchain may return an array of proofs or a single proof object
+                    let proofData: any = null
+                    if (Array.isArray(proofResponseData)) {
+                      if (proofResponseData.length === 0) {
+                        console.log(`⚠️  Proof response is an empty array`)
+                      } else {
+                        proofData = proofResponseData[0]
+                      }
+                    } else if (typeof proofResponseData === 'object' && proofResponseData !== null) {
+                      // Single proof object
+                      proofData = proofResponseData
+                    }
+                    
+                    if (proofData) {
+                      console.log(`   Proof data keys:`, Object.keys(proofData))
+                      console.log(`   Proof data structure:`, { 
+                        hasIndex: proofData.index !== undefined, 
+                        hasNodes: Array.isArray(proofData.nodes),
+                        nodesCount: proofData.nodes?.length,
+                        hasTarget: proofData.target !== undefined,
+                        hasTxOrId: proofData.txOrId !== undefined,
+                        proofDataValue: JSON.stringify(proofData).substring(0, 200)
+                      })
+                      
+                      // Get transaction info to get block height
+                      const txInfoResponse = await fetch(`${wocBaseUrl}/tx/${txid}`)
+                      console.log(`   TX info response status: ${txInfoResponse.status}`)
+                      
+                      if (txInfoResponse.ok) {
+                        const txInfo = await txInfoResponse.json()
+                        const blockHeight = txInfo.blockheight
+                        console.log(`   Block height: ${blockHeight}`)
+                        
+                        if (blockHeight && proofData.nodes && Array.isArray(proofData.nodes) && proofData.nodes.length > 0 && proofData.index !== undefined) {
+                        try {
+                          // Convert TSC proof to MerklePath format
+                          // Based on go-wallet-toolbox/pkg/internal/txutils/proof_for_merkle_path.go
+                          const index = proofData.index
+                          const nodes = proofData.nodes
+                          const treeHeight = nodes.length
+                          
+                          console.log(`   Converting TSC proof: index=${index}, treeHeight=${treeHeight}`)
+                          
+                          // Build path levels
+                          const path: Array<Array<{ offset: number; hash?: string; txid?: boolean; duplicate?: boolean }>> = []
+                          let currentIndex = index
+                          
+                          for (let level = 0; level < treeHeight; level++) {
+                            const node = nodes[level]
+                            const isOdd = currentIndex % 2 === 1
+                            const siblingOffset = isOdd ? currentIndex - 1 : currentIndex + 1
+                            
+                            const levelPath: Array<{ offset: number; hash?: string; txid?: boolean; duplicate?: boolean }> = []
+                            
+                            // Add sibling node
+                            if (node === '*' || (level === 0 && node === txid)) {
+                              levelPath.push({ offset: siblingOffset, duplicate: true })
+                            } else {
+                              levelPath.push({ offset: siblingOffset, hash: node })
+                            }
+                            
+                            // At level 0, add txid leaf
+                            if (level === 0) {
+                              const txidLeaf = { offset: index, hash: txid, txid: true }
+                              if (isOdd) {
+                                levelPath.push(txidLeaf)
+                              } else {
+                                levelPath.unshift(txidLeaf)
+                              }
+                            }
+                            
+                            path.push(levelPath)
+                            currentIndex = currentIndex >> 1
+                          }
+                          
+                          // Create MerklePath with legalOffsetsOnly=false to avoid strict validation
+                          merklePath = new MerklePath(blockHeight, path, false)
+                          console.log(`✅ Retrieved merkle proof for block height ${blockHeight}, path levels: ${path.length}`)
+                        } catch (mpErr: any) {
+                          console.log(`⚠️  Failed to create MerklePath: ${mpErr.message}`)
+                          console.log(`   Error details:`, mpErr)
+                        }
+                        } else {
+                          console.log(`⚠️  Missing required data: blockHeight=${blockHeight}, hasNodes=${Array.isArray(proofData.nodes)}, nodesLength=${proofData.nodes?.length}, hasIndex=${proofData.index !== undefined}`)
+                        }
+                      } else {
+                        console.log(`⚠️  Failed to fetch TX info: ${txInfoResponse.status} ${txInfoResponse.statusText}`)
+                      }
+                    }
+                  } else {
+                    console.log(`⚠️  Failed to fetch proof: ${proofResponse.status} ${proofResponse.statusText}`)
+                    const errorText = await proofResponse.text()
+                    console.log(`   Error response: ${errorText.substring(0, 200)}`)
+                  }
+                } catch (proofErr: any) {
+                  console.log(`⚠️  Could not fetch merkle proof: ${proofErr.message}`)
+                  console.log(`   Error stack:`, proofErr.stack)
+                  console.log('   Will attempt to build BEEF without merkle proof (may fail validation)')
+                }
+
+                // Build AtomicBEEF with transaction and merkle proof
+                // If we have a merkle path, attach it to the transaction
+                if (merklePath) {
+                  tx.merklePath = merklePath
+                  console.log(`✅ Attached merkle proof to transaction`)
+                } else {
+                  console.log(`⚠️  No merkle path available - BEEF will be invalid`)
+                }
+                
+                const beef = new Beef()
+                // Merge transaction (will automatically merge merkle path if attached)
+                beef.mergeTransaction(tx)
+                console.log(`   BEEF after merge: ${beef.bumps.length} BUMPS, ${beef.txs.length} transactions`)
 
                 try {
                   // Prepare payment remittance with proper base64 encoding
@@ -396,7 +408,7 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
                   // Internalize as "wallet payment" protocol (matches Python example)
                   // Python example always uses "wallet payment" protocol with paymentRemittance
                   const internalizeResult = await setup.wallet.internalizeAction({
-                    tx: atomicBeef,
+                    tx: beef.toBinaryAtomic(txid),
                     outputs: [
                       {
                         outputIndex: outputIndex,
