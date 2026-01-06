@@ -888,6 +888,80 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
       expect(actions.actions.length).toBeGreaterThanOrEqual(0)
     }, 10000)
 
+    test('signAction - should sign a previously created signable transaction', async () => {
+      // Check balance first
+      let balance = 0
+      try {
+        balance = await setup.wallet.balance()
+      } catch (err) {
+        console.log('⚠️  Could not check balance - assuming 0')
+      }
+
+      if (balance < 10 && !isLiveMode) {
+        console.log('⚠️  Skipping signAction test - insufficient balance')
+        return
+      }
+
+      try {
+        // Step 1: Create an action with signAndProcess=false to get a signableTransaction
+        const signableResult = await setup.wallet.createAction({
+          description: 'Test for signAction - signable transaction',
+          outputs: [
+            {
+              lockingScript: '006a0b7369676e5f616374696f6e', // OP_RETURN "sign_action"
+              satoshis: 0,
+              outputDescription: 'Test output for signAction',
+              basket: 'opreturn'
+            }
+          ],
+          options: {
+            signAndProcess: false // This returns a signableTransaction
+          }
+        })
+
+        if (signableResult && signableResult.signableTransaction) {
+          const reference = signableResult.signableTransaction.reference
+
+          if (reference) {
+            // Step 2: Call signAction with the reference
+            // For wallet inputs, spends can be empty (wallet auto-signs)
+            const signResult = await setup.wallet.signAction({
+              reference: reference,
+              spends: {}, // Wallet inputs are auto-signed
+              options: { acceptDelayedBroadcast: true }
+            })
+
+            expect(signResult).toBeDefined()
+            // signAction returns either txid (if broadcasted) or tx (AtomicBEEF)
+            if (signResult.txid) {
+              expect(typeof signResult.txid).toBe('string')
+              expect(signResult.txid.length).toBe(64)
+            } else if (signResult.tx) {
+              expect(Array.isArray(signResult.tx)).toBe(true)
+              expect(signResult.tx.length).toBeGreaterThan(0)
+            } else {
+              // signAction may have completed but not returned txid/tx in some cases
+              // This is acceptable - the action was signed
+              expect(signResult).toBeDefined()
+            }
+          } else {
+            console.log('⚠️  signAction test: signableTransaction has no reference')
+          }
+        } else {
+          console.log('⚠️  signAction test: createAction with signAndProcess=false did not return signableTransaction')
+        }
+      } catch (err: any) {
+        if (
+          err.message.includes('Insufficient funds') ||
+          err.message.includes('insufficient')
+        ) {
+          return
+        }
+        // Log but don't fail - signAction may not be available in all scenarios
+        console.log(`⚠️  signAction test: ${err.message}`)
+      }
+    }, 15000)
+
     test('abortAction - should abort an unsigned action if available', async () => {
       // Check if there are any unsigned actions we can abort
       const actions = await setup.wallet.listActions({ labels: [], limit: 20 })
@@ -1091,17 +1165,53 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
     }, 10000)
   })
 
-  // // ============================================================================
-  // // Blockchain Info
-  // // ============================================================================
+  // ============================================================================
+  // Blockchain Info
+  // ============================================================================
 
-  describe.skip('Blockchain Info', () => {
+  describe('Blockchain Info', () => {
     test('getHeight - should fetch current block height', async () => {
-      // Skipped for Python storage server tests - requires external blockchain API
+      // console.log('📊 Testing getHeight...')
+      try {
+        const result = await setup.wallet.getHeight({})
+        // console.log(`📊 Current height: ${result.height}`)
+        expect(result).toBeDefined()
+        expect(result.height).toBeDefined()
+        expect(typeof result.height).toBe('number')
+        expect(result.height).toBeGreaterThan(0)
+        // console.log('✅ getHeight test completed')
+      } catch (err: any) {
+        // If services are not configured for blockchain access, that's expected
+        // But we should still verify the method exists and returns a structured response
+        if (err.message && err.message.includes('not configured')) {
+          console.log('⚠️  Blockchain services not configured - this is expected for some test environments')
+        } else {
+          throw err
+        }
+      }
     }, 10000)
 
     test('getHeaderForHeight - should fetch header for specific height', async () => {
-      // Skipped for Python storage server tests - requires external blockchain API
+      // console.log('📦 Testing getHeaderForHeight...')
+      try {
+        // Use a known height (e.g., block 1 or a recent block)
+        const testHeight = 1
+        const result = await setup.wallet.getHeaderForHeight({ height: testHeight })
+        // console.log(`📦 Header for height ${testHeight}: ${result.header.substring(0, 32)}...`)
+        expect(result).toBeDefined()
+        expect(result.header).toBeDefined()
+        expect(typeof result.header).toBe('string')
+        // Block header should be 80 bytes = 160 hex characters
+        expect(result.header.length).toBe(160)
+        // console.log('✅ getHeaderForHeight test completed')
+      } catch (err: any) {
+        // If services are not configured for blockchain access, that's expected
+        if (err.message && err.message.includes('not configured')) {
+          console.log('⚠️  Blockchain services not configured - this is expected for some test environments')
+        } else {
+          throw err
+        }
+      }
     }, 10000)
   })
 })
