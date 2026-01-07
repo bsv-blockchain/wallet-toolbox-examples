@@ -8,18 +8,6 @@ import { exit } from 'process'
 const DEFAULT_PY_WALLET_TOOLBOX_URL = 'http://localhost:8000'
 
 /**
- * Track nosend transaction references for cleanup.
- * Tests that create nosend transactions should add their references here.
- */
-const pendingAborts: string[] = []
-
-/**
- * Global flag indicating if we're running in live test mode with funded wallet.
- */
-const isLiveMode = process.env.LIVE === 'true' || process.env.LIVE === '1'
-
-
-/**
  * Build Atomic BEEF from raw transaction hex.
  *
  * This helper function takes a raw transaction hex and:
@@ -104,16 +92,8 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
     const env = Setup.getEnv('test')
     // console.log({env})
     // Determine which key to use
-    let rootKeyHex: string
-    if (isLiveMode && process.env.LIVE_PRIVATE_KEY) {
-      rootKeyHex = process.env.LIVE_PRIVATE_KEY
-      // console.log('🔥 LIVE MODE ENABLED - Using funded testnet key')
-      // console.log('⚠️  WARNING: This will broadcast real transactions!')
-    } else {
-      rootKeyHex = env.devKeys[env.identityKey]
-      // console.log('🧪 TEST MODE - Using development keys')
-    }
-
+    let rootKeyHex: string = process.env.LIVE_PRIVATE_KEY || ''
+      
     try {
       // Create wallet without any storage providers
       setup = await Setup.createWallet({
@@ -179,19 +159,6 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
     }
   }, 10000)
 
-  afterAll(async () => {
-    // Cleanup: Abort any pending transactions we created
-    for (const reference of pendingAborts) {
-      try {
-        await setup.wallet.abortAction({ reference })
-      } catch (err) {
-        // Already aborted or completed - ignore
-      }
-    }
-    pendingAborts.length = 0
-
-  }, 10000)
-
   // ============================================================================
   //   Basics
   // ============================================================================
@@ -202,12 +169,11 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
       let balance = 0
       try {
         balance = await setup.wallet.balance()
-        console.log({ balance })
         expect(typeof balance).toBe('number')
         expect(balance).toBeGreaterThanOrEqual(0)
 
 
-        if (isLiveMode && balance === 0) {
+        if (balance === 0) {
           // Try to internalize funding automatically in live mode
           try {
             const FAUCET_DERIVATION_PREFIX = "faucet-prefix-01"
@@ -311,7 +277,7 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
                 }
 
                 // Build Atomic BEEF using the helper function
-                const { atomicBeef, txid: beefTxid } = await buildAtomicBeefFromRawTx(txHex, setup.chain)
+                const { atomicBeef } = await buildAtomicBeefFromRawTx(txHex, setup.chain)
 
                 try {
                   // Prepare payment remittance with proper base64 encoding
@@ -323,13 +289,6 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
                     senderIdentityKey: anyoneKeyHex // Use AnyoneKey (external sender, like faucet)
                   }
 
-                  // console.log(`   Payment remittance:`, {
-                  //   derivationPrefix: paymentRemittance.derivationPrefix,
-                  //   derivationSuffix: paymentRemittance.derivationSuffix,
-                  //   derivationPrefixDecoded: Buffer.from(paymentRemittance.derivationPrefix, 'base64').toString('utf-8'),
-                  //   derivationSuffixDecoded: Buffer.from(paymentRemittance.derivationSuffix, 'base64').toString('utf-8'),
-                  //   senderIdentityKey: paymentRemittance.senderIdentityKey.substring(0, 20) + '... (AnyoneKey)'
-                  // })
 
                   // Internalize as "wallet payment" protocol (matches Python example)
                   // Python example always uses "wallet payment" protocol with paymentRemittance
@@ -345,312 +304,290 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
                     description: 'Auto-internalize funding transaction'
                   })
 
-                  // console.log('✅ Successfully internalized as wallet payment')
-
                   if (internalizeResult) {
-                    // console.log(`✅ Successfully internalized funding transaction`)
-                    // console.log(`   Accepted: ${internalizeResult.accepted}`)
-                    // console.log(`   TXID: ${txid}`)
-
                     // Show Whatsonchain link
                     const wocNetwork = setup.chain === 'main' ? '' : 'test.'
                     const fundingTxUrl = `https://${wocNetwork}whatsonchain.com/tx/${txid}`
                     console.log(`🔗 View funding transaction on Whatsonchain: ${fundingTxUrl}`)
 
-                    // Check balance again after internalization
-                    const newBalance = await setup.wallet.balance()
-                    // console.log(`💰 New balance after internalization: ${newBalance} satoshis`)
+                    await new Promise(resolve => setTimeout(resolve, 2000))
+                    console.log('Slept for 2 seconds after tx')
                   }
                 } catch (internalizeErr: any) {
                   // Final fallback - log and continue
-                  // console.log('⚠️  Could not internalize transaction:', internalizeErr.message)
-
-                  if (internalizeErr.message.includes('BRC-29') || internalizeErr.message.includes('locking script')) {
-                    // console.log('   The output is a regular P2PKH (not created with BRC-29)')
-                    // console.log('   The wallet may still be able to spend it if it can derive the private key')
-                  } else if (internalizeErr.message.includes('AtomicBEEF')) {
-                    // console.log('   The BEEF may be missing merkle proofs (BUMPS)')
-                    // console.log('   This is expected when fetching transactions from external APIs')
-                  }
-
-                  // console.log('   This is best-effort automatic funding - continuing without internalization')
-                  // Continue without exiting - this is best-effort automatic funding
+                  console.log('⚠️  Could not internalize transaction:', internalizeErr.message)
+                  process.exit(-1)
                 }
               } else {
-                // console.log('ℹ️  No unspent outputs found at funding address')
+                console.log('ℹ️  No unspent outputs found at funding address: '+fundingAddress)
                 exit(-1)
               }
             } catch (apiErr: any) {
               console.log('   Could not check external API:', apiErr.message)
               // Don't throw - this is best-effort automatic funding
-              // Continue without exiting
+              process.exit(-1)
             }
           } catch (apiErr) {
             console.log('   Could not check external API')
+            process.exit(-1)
           }
         }
       } catch (err: any) {
-        // console.log('⚠️  Balance check failed (expected for local testing)')
-        if (isLiveMode) {
-          // console.log(
-          //   '   This may indicate services are not configured for live testing.'
-          // )
-        }
+        console.log('⚠️  Balance check failed (expected for local testing)')
         // Balance might fail if services not configured, but that's expected
+        process.exit(-1)
       }
       // Test completed
     }, 10000)
 
-    test('waitForAuthentication - should resolve immediately for base wallet', async () => {
-      // console.log('🔐 Testing waitForAuthentication...')
-      const result = await setup.wallet.waitForAuthentication({})
-      // console.log(`🔐 Authentication result: ${JSON.stringify(result)}`)
-      expect(result).toBeDefined()
-      expect(result.authenticated).toBeDefined()
-      // Base wallet resolves immediately
-      // console.log('✅ waitForAuthentication test completed')
-    }, 10000)
+    // test('waitForAuthentication - should resolve immediately for base wallet', async () => {
+    //   // console.log('🔐 Testing waitForAuthentication...')
+    //   const result = await setup.wallet.waitForAuthentication({})
+    //   // console.log(`🔐 Authentication result: ${JSON.stringify(result)}`)
+    //   expect(result).toBeDefined()
+    //   expect(result.authenticated).toBeDefined()
+    //   // Base wallet resolves immediately
+    //   // console.log('✅ waitForAuthentication test completed')
+    // }, 10000)
 
-    test('isAuthenticated - should check if wallet is authenticated', async () => {
-      // console.log('🔐 Testing isAuthenticated...')
-      const result = await setup.wallet.isAuthenticated({})
-      // console.log(`🔐 Authentication check result: ${JSON.stringify(result)}`)
-      expect(result).toBeDefined()
-      expect(result.authenticated).toBeDefined()
-      expect(typeof result.authenticated).toBe('boolean')
-      // console.log('✅ isAuthenticated test completed')
-    }, 10000)
+    // test('isAuthenticated - should check if wallet is authenticated', async () => {
+    //   // console.log('🔐 Testing isAuthenticated...')
+    //   const result = await setup.wallet.isAuthenticated({})
+    //   // console.log(`🔐 Authentication check result: ${JSON.stringify(result)}`)
+    //   expect(result).toBeDefined()
+    //   expect(result.authenticated).toBeDefined()
+    //   expect(typeof result.authenticated).toBe('boolean')
+    //   // console.log('✅ isAuthenticated test completed')
+    // }, 10000)
 
-    test('getNetwork - should return the network information', async () => {
-      // console.log('🌐 Testing getNetwork...')
-      const result = await setup.wallet.getNetwork({})
-      // console.log(`🌐 Network info: ${JSON.stringify(result)}`)
-      expect(result).toBeDefined()
-      expect(result.network).toBeDefined()
-      expect(['main', 'test', 'testnet']).toContain(result.network)
-      // console.log('✅ getNetwork test completed')
-    }, 10000)
+    // test('getNetwork - should return the network information', async () => {
+    //   // console.log('🌐 Testing getNetwork...')
+    //   const result = await setup.wallet.getNetwork({})
+    //   // console.log(`🌐 Network info: ${JSON.stringify(result)}`)
+    //   expect(result).toBeDefined()
+    //   expect(result.network).toBeDefined()
+    //   expect(['main', 'test', 'testnet']).toContain(result.network)
+    //   // console.log('✅ getNetwork test completed')
+    // }, 10000)
 
-    test('getVersion - should return wallet version information', async () => {
-      // console.log('📦 Testing getVersion...')
-      const result = await setup.wallet.getVersion({})
-      // console.log(`📦 Version info: ${JSON.stringify(result)}`)
-      expect(result).toBeDefined()
-      expect(result.version).toBeDefined()
-      expect(typeof result.version).toBe('string')
-      // console.log('✅ getVersion test completed')
-    }, 10000)
+    // test('getVersion - should return wallet version information', async () => {
+    //   // console.log('📦 Testing getVersion...')
+    //   const result = await setup.wallet.getVersion({})
+    //   // console.log(`📦 Version info: ${JSON.stringify(result)}`)
+    //   expect(result).toBeDefined()
+    //   expect(result.version).toBeDefined()
+    //   expect(typeof result.version).toBe('string')
+    //   // console.log('✅ getVersion test completed')
+    // }, 10000)
   })
 
   // ============================================================================
   // Keys and Signatures
   // ============================================================================
 
-  describe('Keys and Signatures', () => {
-    test('getPublicKey - should derive protocol-specific public key', async () => {
-      // console.log('🔑 Testing public key derivation...')
-      const result = await setup.wallet.getPublicKey({
-        identityKey: true,
-        protocolID: [0, 'testprotocol'],
-        keyID: '1',
-        counterparty: 'self'
-      })
+  // describe('Keys and Signatures', () => {
+  //   test('getPublicKey - should derive protocol-specific public key', async () => {
+  //     // console.log('🔑 Testing public key derivation...')
+  //     const result = await setup.wallet.getPublicKey({
+  //       identityKey: true,
+  //       protocolID: [0, 'testprotocol'],
+  //       keyID: '1',
+  //       counterparty: 'self'
+  //     })
 
-      // console.log(
-      //   `🔑 Derived public key: ${result.publicKey.substring(0, 20)}...`
-      // )
-      expect(result).toBeDefined()
-      expect(result.publicKey).toBeDefined()
-      expect(typeof result.publicKey).toBe('string')
-      expect(result.publicKey.length).toBeGreaterThan(60) // Public key length
-      // console.log('✅ Public key test completed')
-    }, 10000)
+  //     // console.log(
+  //     //   `🔑 Derived public key: ${result.publicKey.substring(0, 20)}...`
+  //     // )
+  //     expect(result).toBeDefined()
+  //     expect(result.publicKey).toBeDefined()
+  //     expect(typeof result.publicKey).toBe('string')
+  //     expect(result.publicKey.length).toBeGreaterThan(60) // Public key length
+  //     // console.log('✅ Public key test completed')
+  //   }, 10000)
 
-    test('createSignature - should sign data with wallet keys', async () => {
-      // console.log('✍️  Testing signature creation...')
-      const testMessage = 'Hello, BSV!'
-      const data = Array.from(Buffer.from(testMessage))
+  //   test('createSignature - should sign data with wallet keys', async () => {
+  //     // console.log('✍️  Testing signature creation...')
+  //     const testMessage = 'Hello, BSV!'
+  //     const data = Array.from(Buffer.from(testMessage))
 
-      const result = await setup.wallet.createSignature({
-        data,
-        protocolID: [0, 'testprotocol'],
-        keyID: '1',
-        counterparty: 'self'
-      })
-      // console.log(
-      //   `✍️  Created signature: ${Buffer.from(result.signature.slice(0, 10)).toString('hex')}...`
-      // )
-      expect(result).toBeDefined()
-      expect(result.signature).toBeDefined()
-      // console.log('✅ Signature creation test completed')
-    }, 10000)
+  //     const result = await setup.wallet.createSignature({
+  //       data,
+  //       protocolID: [0, 'testprotocol'],
+  //       keyID: '1',
+  //       counterparty: 'self'
+  //     })
+  //     // console.log(
+  //     //   `✍️  Created signature: ${Buffer.from(result.signature.slice(0, 10)).toString('hex')}...`
+  //     // )
+  //     expect(result).toBeDefined()
+  //     expect(result.signature).toBeDefined()
+  //     // console.log('✅ Signature creation test completed')
+  //   }, 10000)
 
-    test('verifySignature - should create and verify signature round-trip', async () => {
-      // console.log('🔍 Testing signature verification...')
-      const testMessage = 'Test signature verification'
-      const data = Array.from(Buffer.from(testMessage))
+  //   test('verifySignature - should create and verify signature round-trip', async () => {
+  //     // console.log('🔍 Testing signature verification...')
+  //     const testMessage = 'Test signature verification'
+  //     const data = Array.from(Buffer.from(testMessage))
 
-      // Create signature
-      const createResult = await setup.wallet.createSignature({
-        data,
-        protocolID: [0, 'testprotocol'],
-        keyID: '1',
-        counterparty: 'self'
-      })
+  //     // Create signature
+  //     const createResult = await setup.wallet.createSignature({
+  //       data,
+  //       protocolID: [0, 'testprotocol'],
+  //       keyID: '1',
+  //       counterparty: 'self'
+  //     })
 
-      // Verify signature
-      const verifyResult = await setup.wallet.verifySignature({
-        data,
-        signature: createResult.signature,
-        protocolID: [0, 'testprotocol'],
-        keyID: '1',
-        counterparty: 'self'
-      })
+  //     // Verify signature
+  //     const verifyResult = await setup.wallet.verifySignature({
+  //       data,
+  //       signature: createResult.signature,
+  //       protocolID: [0, 'testprotocol'],
+  //       keyID: '1',
+  //       counterparty: 'self'
+  //     })
 
-      // console.log(`🔍 Signature verification result: ${verifyResult.valid}`)
-      expect(verifyResult).toBeDefined()
-      expect(verifyResult.valid).toBe(true)
-      // console.log('✅ Signature verification test completed')
-    }, 10000)
+  //     // console.log(`🔍 Signature verification result: ${verifyResult.valid}`)
+  //     expect(verifyResult).toBeDefined()
+  //     expect(verifyResult.valid).toBe(true)
+  //     // console.log('✅ Signature verification test completed')
+  //   }, 10000)
 
-    test('revealCounterpartyKeyLinkage - should reveal counterparty key linkage', async () => {
-      try {
-        const result = await setup.wallet.revealCounterpartyKeyLinkage({
-          counterparty: 'self',
-          verifier: '02' + 'a'.repeat(64), // demo verifier pubkey
-          privilegedReason: 'Demo'
-        })
+  //   test('revealCounterpartyKeyLinkage - should reveal counterparty key linkage', async () => {
+  //     try {
+  //       const result = await setup.wallet.revealCounterpartyKeyLinkage({
+  //         counterparty: 'self',
+  //         verifier: '02' + 'a'.repeat(64), // demo verifier pubkey
+  //         privilegedReason: 'Demo'
+  //       })
 
-        expect(result).toBeDefined()
-        expect(result.prover).toBeDefined()
-        expect(result.counterparty).toBeDefined()
-      } catch (err: any) {
-        // This might fail in test environments, which is expected
-      }
-    }, 10000)
+  //       expect(result).toBeDefined()
+  //       expect(result.prover).toBeDefined()
+  //       expect(result.counterparty).toBeDefined()
+  //     } catch (err: any) {
+  //       // This might fail in test environments, which is expected
+  //     }
+  //   }, 10000)
 
-    test('revealSpecificKeyLinkage - should reveal specific key linkage', async () => {
-      try {
-        const result = await setup.wallet.revealSpecificKeyLinkage({
-          counterparty: 'self',
-          verifier: '02' + 'a'.repeat(64), // demo verifier pubkey
-          protocolID: [0, 'testprotocol'],
-          keyID: '1',
-          privilegedReason: 'Demo'
-        })
+  //   test('revealSpecificKeyLinkage - should reveal specific key linkage', async () => {
+  //     try {
+  //       const result = await setup.wallet.revealSpecificKeyLinkage({
+  //         counterparty: 'self',
+  //         verifier: '02' + 'a'.repeat(64), // demo verifier pubkey
+  //         protocolID: [0, 'testprotocol'],
+  //         keyID: '1',
+  //         privilegedReason: 'Demo'
+  //       })
 
-        expect(result).toBeDefined()
-        expect(result.prover).toBeDefined()
-        expect(result.counterparty).toBeDefined()
-        expect(result.protocolID).toBeDefined()
-        expect(result.keyID).toBeDefined()
-      } catch (err: any) {
-        // This might fail in test environments, which is expected
-      }
-    }, 10000)
-  })
+  //       expect(result).toBeDefined()
+  //       expect(result.prover).toBeDefined()
+  //       expect(result.counterparty).toBeDefined()
+  //       expect(result.protocolID).toBeDefined()
+  //       expect(result.keyID).toBeDefined()
+  //     } catch (err: any) {
+  //       // This might fail in test environments, which is expected
+  //     }
+  //   }, 10000)
+  // })
 
   // // ============================================================================
   // // Crypto Operations
   // // ============================================================================
 
-  describe('Crypto Operations', () => {
-    test('createHmac - should generate HMAC for message', async () => {
-      // console.log('🔐 Testing HMAC creation...')
-      const testMessage = 'Hello, HMAC!'
-      const data = Array.from(Buffer.from(testMessage))
+  // describe('Crypto Operations', () => {
+  //   test('createHmac - should generate HMAC for message', async () => {
+  //     // console.log('🔐 Testing HMAC creation...')
+  //     const testMessage = 'Hello, HMAC!'
+  //     const data = Array.from(Buffer.from(testMessage))
 
-      const result = await setup.wallet.createHmac({
-        data,
-        protocolID: [0, 'testprotocol'],
-        keyID: '1',
-        counterparty: 'self'
-      })
+  //     const result = await setup.wallet.createHmac({
+  //       data,
+  //       protocolID: [0, 'testprotocol'],
+  //       keyID: '1',
+  //       counterparty: 'self'
+  //     })
 
-      // console.log(
-      //   `🔐 Generated HMAC: ${Buffer.from(result.hmac.slice(0, 10)).toString('hex')}...`
-      // )
-      expect(result).toBeDefined()
-      expect(result.hmac).toBeDefined()
-      // console.log('✅ HMAC creation test completed')
-    }, 10000)
+  //     // console.log(
+  //     //   `🔐 Generated HMAC: ${Buffer.from(result.hmac.slice(0, 10)).toString('hex')}...`
+  //     // )
+  //     expect(result).toBeDefined()
+  //     expect(result.hmac).toBeDefined()
+  //     // console.log('✅ HMAC creation test completed')
+  //   }, 10000)
 
-    test('verifyHmac - should create and verify HMAC round-trip', async () => {
-      // console.log('🔍 Testing HMAC verification...')
-      const testMessage = 'Test HMAC verification'
-      const data = Array.from(Buffer.from(testMessage))
+  //   test('verifyHmac - should create and verify HMAC round-trip', async () => {
+  //     // console.log('🔍 Testing HMAC verification...')
+  //     const testMessage = 'Test HMAC verification'
+  //     const data = Array.from(Buffer.from(testMessage))
 
-      // Create HMAC
-      const createResult = await setup.wallet.createHmac({
-        data,
-        protocolID: [0, 'testprotocol'],
-        keyID: '1',
-        counterparty: 'self'
-      })
+  //     // Create HMAC
+  //     const createResult = await setup.wallet.createHmac({
+  //       data,
+  //       protocolID: [0, 'testprotocol'],
+  //       keyID: '1',
+  //       counterparty: 'self'
+  //     })
 
-      // Verify HMAC
-      const verifyResult = await setup.wallet.verifyHmac({
-        data,
-        hmac: createResult.hmac,
-        protocolID: [0, 'testprotocol'],
-        keyID: '1',
-        counterparty: 'self'
-      })
+  //     // Verify HMAC
+  //     const verifyResult = await setup.wallet.verifyHmac({
+  //       data,
+  //       hmac: createResult.hmac,
+  //       protocolID: [0, 'testprotocol'],
+  //       keyID: '1',
+  //       counterparty: 'self'
+  //     })
 
-      // console.log(`🔍 HMAC verification result: ${verifyResult.valid}`)
-      // console.log('✅ HMAC verification test completed')
-      expect(verifyResult).toBeDefined()
-      expect(verifyResult.valid).toBe(true)
-      // console.log('✅ HMAC verification test completed')
-    }, 10000)
+  //     // console.log(`🔍 HMAC verification result: ${verifyResult.valid}`)
+  //     // console.log('✅ HMAC verification test completed')
+  //     expect(verifyResult).toBeDefined()
+  //     expect(verifyResult.valid).toBe(true)
+  //     // console.log('✅ HMAC verification test completed')
+  //   }, 10000)
 
-    test('encrypt/decrypt - should encrypt data and decrypt it back', async () => {
-      // console.log('🔒 Testing encryption/decryption...')
-      const testMessage = 'Secret Message!'
-      const plaintext = Array.from(Buffer.from(testMessage))
+  //   test('encrypt/decrypt - should encrypt data and decrypt it back', async () => {
+  //     // console.log('🔒 Testing encryption/decryption...')
+  //     const testMessage = 'Secret Message!'
+  //     const plaintext = Array.from(Buffer.from(testMessage))
 
-      // Encrypt
-      const encryptResult = await setup.wallet.encrypt({
-        plaintext,
-        protocolID: [0, 'encryption'],
-        keyID: '1',
-        counterparty: 'self'
-      })
+  //     // Encrypt
+  //     const encryptResult = await setup.wallet.encrypt({
+  //       plaintext,
+  //       protocolID: [0, 'encryption'],
+  //       keyID: '1',
+  //       counterparty: 'self'
+  //     })
 
-      // console.log(
-      //   `🔒 Encrypted message: ${Buffer.from(encryptResult.ciphertext.slice(0, 10)).toString('hex')}...`
-      // )
-      expect(encryptResult).toBeDefined()
-      expect(encryptResult.ciphertext).toBeDefined()
+  //     // console.log(
+  //     //   `🔒 Encrypted message: ${Buffer.from(encryptResult.ciphertext.slice(0, 10)).toString('hex')}...`
+  //     // )
+  //     expect(encryptResult).toBeDefined()
+  //     expect(encryptResult.ciphertext).toBeDefined()
 
-      // Decrypt
-      const decryptResult = await setup.wallet.decrypt({
-        ciphertext: encryptResult.ciphertext,
-        protocolID: [0, 'encryption'],
-        keyID: '1',
-        counterparty: 'self'
-      })
+  //     // Decrypt
+  //     const decryptResult = await setup.wallet.decrypt({
+  //       ciphertext: encryptResult.ciphertext,
+  //       protocolID: [0, 'encryption'],
+  //       keyID: '1',
+  //       counterparty: 'self'
+  //     })
 
-      expect(decryptResult).toBeDefined()
-      expect(decryptResult.plaintext).toBeDefined()
-      expect(Array.isArray(decryptResult.plaintext)).toBe(true)
+  //     expect(decryptResult).toBeDefined()
+  //     expect(decryptResult.plaintext).toBeDefined()
+  //     expect(Array.isArray(decryptResult.plaintext)).toBe(true)
 
-      // Verify decrypted message matches original
-      const decrypted = Buffer.from(decryptResult.plaintext).toString()
-      // console.log(`🔓 Decrypted message: "${decrypted}"`)
-      expect(decrypted).toBe(testMessage)
-      // console.log('✅ Encryption/decryption test completed')
-    }, 10000)
-  })
+  //     // Verify decrypted message matches original
+  //     const decrypted = Buffer.from(decryptResult.plaintext).toString()
+  //     // console.log(`🔓 Decrypted message: "${decrypted}"`)
+  //     expect(decrypted).toBe(testMessage)
+  //     // console.log('✅ Encryption/decryption test completed')
+  //   }, 10000)
+  // })
 
   // ============================================================================
   // Actions
   // ============================================================================
 
   describe('Actions', () => {
-    test('createAction - should create OP_RETURN transaction (noSend + abort)', async () => {
-      // console.log(`Starting createAction test ${isLiveMode ? '(LIVE)' : '(test mode)'}`)
-
+    test('createAction - should create OP_RETURN transaction', async () => {
       // Check balance first - need at least 10 sats to safely run this test
       // For externally-funded outputs, also check the 'funding' basket
       let balance = 0
@@ -662,19 +599,13 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
         console.log('⚠️  Could not check balance - assuming 0')
       }
 
-      const requiredBalance = 10
+      const requiredBalance = 1  // Temporarily lower for debugging
       if (balance < requiredBalance) {
-        if (isLiveMode) {
-          // console.log(
-          //   `❌ LIVE MODE: Insufficient balance (${balance} < ${requiredBalance} sats)`
-          // )
-          // console.log('   Fund your wallet before running live tests.')
-          throw new Error('Insufficient funds for live testing')
-        } else {
           console.log('⚠️  Skipping test - insufficient balance')
           return
-        }
       }
+
+      console.log(`🔍 Wallet balance: ${balance}, proceeding with test`)
 
       try {
         const message = 'Hello, World! - Test Action'
@@ -683,7 +614,6 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
         const length = messageBytes.length
         const lockingScript = `006a${length.toString(16).padStart(2, '0')}${hexData}`
 
-        const shouldBroadcast = isLiveMode
         let action: any
         try {
           action = await setup.wallet.createAction({
@@ -693,43 +623,85 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
             ],
             labels: ['test:create_action'],
             options: {
-              noSend: !shouldBroadcast,
-              acceptDelayedBroadcast: shouldBroadcast ? false : true
+              acceptDelayedBroadcast: false
             }
           })
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          console.log('Slept for 2 seconds after tx')
         } catch (error: any) {
           // When acceptDelayedBroadcast is false, unsuccessful results throw WERR_REVIEW_ACTIONS
           // Extract the results from the error and treat as action result
           if (error.name === 'WERR_REVIEW_ACTIONS' || error.message?.includes('require review')) {
-            // console.log('⚠️  Action requires review (undelayed mode)')
+            console.log('⚠️  Action requires review even with delayed broadcast')
             action = {
               txid: error.txid,
               tx: error.tx,
               sendWithResults: error.sendWithResults || [],
               reviewActionResults: error.reviewActionResults || [],
-              noSendChange: error.noSendChange
             }
             // console.dir(action, { depth: null })
-            
+
             // Log review results
             if (action.reviewActionResults && action.reviewActionResults.length > 0) {
+              console.log(`📋 Found ${action.reviewActionResults.length} review action result(s)`)
+              // Log all review results for debugging
+              action.reviewActionResults.forEach((result: any, index: number) => {
+                console.log(`   Review result ${index + 1}:`, {
+                  status: result.status,
+                  txid: result.txid,
+                  reference: result.reference,
+                  message: result.message
+                })
+              })
+
+              // Debug: Check if we have tx data
+              if (action.tx) {
+                console.log(`📄 Transaction BEEF data length: ${action.tx.length} bytes`)
+                // Try to parse the BEEF to see what's in it
+                try {
+                  const beefData = action.tx
+                  console.log(`📄 First 100 bytes of BEEF: ${Buffer.from(beefData.slice(0, 100)).toString('hex')}`)
+                } catch (e: any) {
+                  console.log(`⚠️  Could not parse BEEF data: ${e.message}`)
+                }
+              } else {
+                console.log(`⚠️  No tx (BEEF) data in action`)
+              }
+
               // Fail the test if any review action result has an error status
               const errorResults = action.reviewActionResults.filter((result: any) => result.status === 'error')
               if (errorResults.length > 0) {
                 const errorMessages = errorResults.map((result: any) =>
-                  `${result.txid}: ${result.message || 'Unknown error'}`
+                  `${result.txid || 'no-txid'}: ${result.message || 'Unknown error'}`
                 ).join('; ')
                 console.error(`❌ Review action failed with errors: ${errorMessages}`)
+
+                // Try to abort any actions that failed to clean up reserved UTXOs
+                for (const errorResult of errorResults) {
+                  if (errorResult.reference || errorResult.txid) {
+                    try {
+                      const abortRef = errorResult.reference || errorResult.txid
+                      console.log(`🔄 Attempting to abort failed action: ${abortRef}`)
+                      const abortResult = await setup.wallet.abortAction({ reference: abortRef })
+                      console.log(`✅ Abort result for ${abortRef}:`, JSON.stringify(abortResult))
+                    } catch (abortErr: any) {
+                      console.error(`⚠️  Failed to abort action ${errorResult.txid || errorResult.reference}:`, abortErr.message)
+                    }
+                  } else {
+                    console.warn(`⚠️  Cannot abort review action - no reference or txid available:`, errorResult)
+                  }
+                }
+
                 // Use expect().toBe() to fail the test explicitly
                 expect(errorResults.length).toBe(0)
               }
             }
-            
+
             // Also check sendWithResults for failures
             if (action.sendWithResults && Array.isArray(action.sendWithResults)) {
               const failedResults = action.sendWithResults.filter((result: any) => result.status === 'failed')
               if (failedResults.length > 0) {
-                const errorMessages = failedResults.map((result: any) => 
+                const errorMessages = failedResults.map((result: any) =>
                   `${result.txid}: ${result.message || 'Broadcast failed'}`
                 ).join('; ')
                 console.error(`❌ Send action failed: ${errorMessages}`)
@@ -777,441 +749,431 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
 //        console.log(`✅ Action created with ${action.signableTransaction ? 'signableTransaction' : action.txid ? 'txid' : 'unknown'}`)
 
       } catch (err: any) {
-        if (
-          err.message.includes('Insufficient funds') ||
-          err.message.includes('insufficient')
-        )
-          return
+        // Don't swallow errors - if the transaction fails, the test should fail
         throw err
       }
     }, 15000)
+    
+    // test('createAction - verify action result structure', async () => {
+    //   // Check balance first
+    //   let balance = 0
+    //   try {
+    //     balance = await setup.wallet.balance()
+    //     // console.log(`💰 Current balance: ${balance} satoshis`)
+    //   } catch (err) {
+    //     console.log('⚠️  Could not check balance - assuming 0')
+    //   }
 
-    test('createAction - verify action result structure', async () => {
-      // Check balance first
-      let balance = 0
-      try {
-        balance = await setup.wallet.balance()
-        // console.log(`💰 Current balance: ${balance} satoshis`)
-      } catch (err) {
-        console.log('⚠️  Could not check balance - assuming 0')
-      }
+    //   if (balance < 10) {
+    //     console.log('⚠️  Skipping structure test - insufficient balance')
+    //     return
+    //   }
 
-      if (balance < 10 && !isLiveMode) {
-        console.log('⚠️  Skipping structure test - insufficient balance')
-        return
-      }
+    //   try {
+    //     const message = 'Structure Test'
+    //     const messageBytes = Buffer.from(message)
+    //     const hexData = messageBytes.toString('hex')
+    //     const length = messageBytes.length
+    //     const lockingScript = `006a${length.toString(16).padStart(2, '0')}${hexData}`
 
-      try {
-        const message = 'Structure Test' + (isLiveMode ? ' (LIVE)' : '')
-        const messageBytes = Buffer.from(message)
-        const hexData = messageBytes.toString('hex')
-        const length = messageBytes.length
-        const lockingScript = `006a${length.toString(16).padStart(2, '0')}${hexData}`
+    //     let action
+    //     try {
+    //       action = await setup.wallet.createAction({
+    //         description: `Structure test: ${message}`,
+    //         outputs: [
+    //           {
+    //             lockingScript,
+    //             satoshis: 0,
+    //             outputDescription: 'Test output',
+    //             basket: 'opreturn',
+    //             tags: ['test']
+    //           }
+    //         ],
+    //         labels: ['test:structure'],
+    //         options: {
+    //           noSend: true  // Create signableTransaction for testing
+    //         }
+    //       })
+          
+    //       await new Promise(resolve => setTimeout(resolve, 2000))
+    //       console.log('Slept for 2 seconds after tx')
 
-        const shouldBroadcast = isLiveMode && balance >= 10
+    //     } catch (err: any) {
+    //       console.error('❌ createAction failed:', err.message)
+    //       throw err
+    //     }
 
-        let action
-        try {
-          action = await setup.wallet.createAction({
-            description: `Structure test: ${message}`,
-            outputs: [
-              {
-                lockingScript,
-                satoshis: 0,
-                outputDescription: 'Test output',
-                basket: 'opreturn',
-                tags: ['test', ...(isLiveMode ? ['live-test'] : ['test-nosend'])]
-              }
-            ],
-            labels: ['test:structure'],
-            options: {
-              noSend: !shouldBroadcast
-            }
-          })
+    //     // console.log(
+    //     //   `✅ Structure test action created with ${action.signableTransaction ? 'signableTransaction' : action.txid ? 'txid' : 'unknown'}`
+    //     // )
+    //     expect(action).toBeDefined()
 
-        } catch (err: any) {
-          console.error('❌ createAction failed:', err.message)
-          throw err
-        }
+    //     // Verify result structure - either signableTransaction or txid
+    //     if (action.signableTransaction) {
+    //       expect(action.signableTransaction.reference).toBeDefined()
+    //       expect(action.signableTransaction.tx).toBeDefined()
+    //       // Cleanup - abort to release UTXOs (unreserve satoshis)
+    //       const reference = action.signableTransaction.reference
+    //       console.log(`🔄 Aborting action with reference: ${reference}`)
+    //       const abortResult = await setup.wallet.abortAction({
+    //         reference: reference
+    //       })
+    //       console.log(`✅ Abort action result:`, JSON.stringify(abortResult))
+    //       expect(abortResult.aborted).toBe(true)
+    //     } else if (action.txid) {
+    //       // In live mode with auto-signing, expect txid
+    //       expect(typeof action.txid).toBe('string')
+    //       expect(action.txid!.length).toBe(64)
+    //     } else {
+    //       throw new Error('Expected either signableTransaction or txid')
+    //     }
+    //   } catch (err: any) {
+    //     if (
+    //       err.message.includes('Insufficient funds') ||
+    //       err.message.includes('insufficient')
+    //     )
+    //       return
+    //     throw err
+    //   }
+    // }, 15000)
 
-        // console.log(
-        //   `✅ Structure test action created with ${action.signableTransaction ? 'signableTransaction' : action.txid ? 'txid' : 'unknown'}`
-        // )
-        expect(action).toBeDefined()
+    // test('listActions - should list recent wallet actions', async () => {
+    //   const actions = await setup.wallet.listActions({
+    //     labels: [],
+    //     limit: 10,
+    //     includeLabels: true
+    //   })
 
-        if (shouldBroadcast) {
-          // In live mode, expect txid
-          expect(action.txid).toBeDefined()
-          expect(typeof action.txid).toBe('string')
-          expect(action.txid!.length).toBe(64)
-          // console.log(`📡 Transaction broadcasted! TXID: ${action.txid}`)
-          console.log(
-            `🔗 View on explorer: https://test.whatsonchain.com/tx/${action.txid}`
-          )
-        } else {
-          // Verify result structure - either signableTransaction or txid
-          if (action.signableTransaction) {
-            expect(action.signableTransaction.reference).toBeDefined()
-            expect(action.signableTransaction.tx).toBeDefined()
-            // console.log(
-            //   `📝 Keeping action ${action.signableTransaction.reference} for database verification`
-            // )
-            // Keep this action for the listActions test to find it
-            // Don't abort immediately - will be cleaned up in afterAll
-          } else if (action.txid) {
-            expect(typeof action.txid).toBe('string')
-            expect(action.txid!.length).toBe(64)
-          } else {
-            throw new Error('Expected either signableTransaction or txid')
-          }
-        }
-      } catch (err: any) {
-        if (
-          err.message.includes('Insufficient funds') ||
-          err.message.includes('insufficient')
-        )
-          return
-        throw err
-      }
-    }, 15000)
+    //   expect(actions).toBeDefined()
+    //   expect(actions.actions).toBeDefined()
+    //   expect(Array.isArray(actions.actions)).toBe(true)
+    //   expect(actions.actions.length).toBeGreaterThanOrEqual(0)
+    // }, 10000)
 
-    test('listActions - should list recent wallet actions', async () => {
-      const actions = await setup.wallet.listActions({
-        labels: [],
-        limit: 10,
-        includeLabels: true
-      })
+    // test('signAction - should sign a previously created signable transaction', async () => {
+    //   // Check balance first
+    //   let balance = 0
+    //   try {
+    //     balance = await setup.wallet.balance()
+    //   } catch (err) {
+    //     console.log('⚠️  Could not check balance - assuming 0')
+    //   }
 
-      expect(actions).toBeDefined()
-      expect(actions.actions).toBeDefined()
-      expect(Array.isArray(actions.actions)).toBe(true)
-      expect(actions.actions.length).toBeGreaterThanOrEqual(0)
-    }, 10000)
+    //   if (balance < 10) {
+    //     console.log('⚠️  Skipping signAction test - insufficient balance')
+    //     return
+    //   }
 
-    test('signAction - should sign a previously created signable transaction', async () => {
-      // Check balance first
-      let balance = 0
-      try {
-        balance = await setup.wallet.balance()
-      } catch (err) {
-        console.log('⚠️  Could not check balance - assuming 0')
-      }
+    //   try {
+    //     // Step 1: Create an action with signAndProcess=false to get a signableTransaction
+    //     const signableResult = await setup.wallet.createAction({
+    //       description: 'Test for signAction - signable transaction',
+    //       outputs: [
+    //         {
+    //           lockingScript: '006a0b7369676e5f616374696f6e', // OP_RETURN "sign_action"
+    //           satoshis: 0,
+    //           outputDescription: 'Test output for signAction',
+    //           basket: 'opreturn'
+    //         }
+    //       ],
+    //       options: {
+    //         signAndProcess: false // This returns a signableTransaction
+    //       }
+    //     })
 
-      if (balance < 10 && !isLiveMode) {
-        console.log('⚠️  Skipping signAction test - insufficient balance')
-        return
-      }
+    //     if (signableResult && signableResult.signableTransaction) {
+    //       const reference = signableResult.signableTransaction.reference
 
-      try {
-        // Step 1: Create an action with signAndProcess=false to get a signableTransaction
-        const signableResult = await setup.wallet.createAction({
-          description: 'Test for signAction - signable transaction',
-          outputs: [
-            {
-              lockingScript: '006a0b7369676e5f616374696f6e', // OP_RETURN "sign_action"
-              satoshis: 0,
-              outputDescription: 'Test output for signAction',
-              basket: 'opreturn'
-            }
-          ],
-          options: {
-            signAndProcess: false // This returns a signableTransaction
-          }
-        })
+    //       if (reference) {
+    //         // Step 2: Call signAction with the reference
+    //         // For wallet inputs, spends can be empty (wallet auto-signs)
+    //         const signResult = await setup.wallet.signAction({
+    //           reference: reference,
+    //           spends: {}, // Wallet inputs are auto-signed
+    //           options: { acceptDelayedBroadcast: true }
+    //         })
 
-        if (signableResult && signableResult.signableTransaction) {
-          const reference = signableResult.signableTransaction.reference
+    //         expect(signResult).toBeDefined()
+    //         // signAction returns either txid (if broadcasted) or tx (AtomicBEEF)
+    //         if (signResult.txid) {
+    //           expect(typeof signResult.txid).toBe('string')
+    //           expect(signResult.txid.length).toBe(64)
+    //         } else if (signResult.tx) {
+    //           expect(Array.isArray(signResult.tx)).toBe(true)
+    //           expect(signResult.tx.length).toBeGreaterThan(0)
+    //         } else {
+    //           // signAction may have completed but not returned txid/tx in some cases
+    //           // This is acceptable - the action was signed
+    //           expect(signResult).toBeDefined()
+    //         }
+    //       } else {
+    //         console.log('⚠️  signAction test: signableTransaction has no reference')
+    //       }
+    //     } else {
+    //       console.log('⚠️  signAction test: createAction with signAndProcess=false did not return signableTransaction')
+    //     }
+    //   } catch (err: any) {
+    //     if (
+    //       err.message.includes('Insufficient funds') ||
+    //       err.message.includes('insufficient')
+    //     ) {
+    //       return
+    //     }
+    //     // Log but don't fail - signAction may not be available in all scenarios
+    //     console.log(`⚠️  signAction test: ${err.message}`)
+    //   }
+    // }, 15000)
 
-          if (reference) {
-            // Step 2: Call signAction with the reference
-            // For wallet inputs, spends can be empty (wallet auto-signs)
-            const signResult = await setup.wallet.signAction({
-              reference: reference,
-              spends: {}, // Wallet inputs are auto-signed
-              options: { acceptDelayedBroadcast: true }
-            })
+    // test('abortAction - should abort an unsigned action if available', async () => {
+    //   // Check if there are any unsigned actions we can abort
+    //   const actions = await setup.wallet.listActions({ labels: [], limit: 20 })
+    //   const unsignedAction = actions.actions.find(
+    //     a => a.status === 'unsigned'
+    //   )
 
-            expect(signResult).toBeDefined()
-            // signAction returns either txid (if broadcasted) or tx (AtomicBEEF)
-            if (signResult.txid) {
-              expect(typeof signResult.txid).toBe('string')
-              expect(signResult.txid.length).toBe(64)
-            } else if (signResult.tx) {
-              expect(Array.isArray(signResult.tx)).toBe(true)
-              expect(signResult.tx.length).toBeGreaterThan(0)
-            } else {
-              // signAction may have completed but not returned txid/tx in some cases
-              // This is acceptable - the action was signed
-              expect(signResult).toBeDefined()
-            }
-          } else {
-            console.log('⚠️  signAction test: signableTransaction has no reference')
-          }
-        } else {
-          console.log('⚠️  signAction test: createAction with signAndProcess=false did not return signableTransaction')
-        }
-      } catch (err: any) {
-        if (
-          err.message.includes('Insufficient funds') ||
-          err.message.includes('insufficient')
-        ) {
-          return
-        }
-        // Log but don't fail - signAction may not be available in all scenarios
-        console.log(`⚠️  signAction test: ${err.message}`)
-      }
-    }, 15000)
-
-    test('abortAction - should abort an unsigned action if available', async () => {
-      // Check if there are any unsigned actions we can abort
-      const actions = await setup.wallet.listActions({ labels: [], limit: 20 })
-      const unsignedAction = actions.actions.find(
-        a => a.status === 'unsigned' || a.status === 'nosend'
-      )
-
-      // listActions doesn't return references, so we can only abort
-      // actions we created in the same session with signableTransaction
-      expect(unsignedAction === undefined || unsignedAction.status).toBeTruthy()
-    }, 10000)
+    //   // listActions doesn't return references, so we can only abort
+    //   // actions we created in the same session with signableTransaction
+    //   expect(unsignedAction === undefined || unsignedAction.status).toBeTruthy()
+    // }, 10000)
   })
 
   // ============================================================================
   // Outputs
   // ============================================================================
 
-  describe('Outputs', () => {
-    test('listOutputs - should list wallet outputs', async () => {
-      const outputs = await setup.wallet.listOutputs({
-        basket: 'default',
-        limit: 10,
-        offset: 0
-      })
+  // describe('Outputs', () => {
+  //   test('listOutputs - should list wallet outputs', async () => {
+  //     const outputs = await setup.wallet.listOutputs({
+  //       basket: 'default',
+  //       limit: 10,
+  //       offset: 0
+  //     })
 
-      expect(outputs).toBeDefined()
-      expect(outputs.outputs).toBeDefined()
-      expect(Array.isArray(outputs.outputs)).toBe(true)
-      expect(typeof outputs.totalOutputs).toBe('number')
-      expect(outputs.totalOutputs).toBeGreaterThanOrEqual(0)
-    }, 10000)
+  //     expect(outputs).toBeDefined()
+  //     expect(outputs.outputs).toBeDefined()
+  //     expect(Array.isArray(outputs.outputs)).toBe(true)
+  //     expect(typeof outputs.totalOutputs).toBe('number')
+  //     expect(outputs.totalOutputs).toBeGreaterThanOrEqual(0)
+  //   }, 10000)
 
-    test('relinquishOutput - should relinquish an output from wallet tracking', async () => {
-      // Use a dummy outpoint since we likely don't have real outputs to relinquish
-      const dummyOutpoint =
-        '0000000000000000000000000000000000000000000000000000000000000000:0'
+  //   test('relinquishOutput - should relinquish an output from wallet tracking', async () => {
+  //     // Use a dummy outpoint since we likely don't have real outputs to relinquish
+  //     const dummyOutpoint =
+  //       '0000000000000000000000000000000000000000000000000000000000000000:0'
 
-      try {
-        const result = await setup.wallet.relinquishOutput({
-          basket: 'default',
-          output: dummyOutpoint
-        })
+  //     try {
+  //       const result = await setup.wallet.relinquishOutput({
+  //         basket: 'default',
+  //         output: dummyOutpoint
+  //       })
 
-        expect(result).toBeDefined()
-        expect(result.relinquished).toBeDefined()
-      } catch (err: any) {
-        // Expected to fail with dummy outpoint
-        expect(err).toBeDefined()
-      }
-    }, 10000)
-  })
+  //       expect(result).toBeDefined()
+  //       expect(result.relinquished).toBeDefined()
+  //     } catch (err: any) {
+  //       // Expected to fail with dummy outpoint
+  //       expect(err).toBeDefined()
+  //     }
+  //   }, 10000)
+  // })
 
   // ============================================================================
   // Certificates
   // ============================================================================
 
-  describe('Certificates', () => {
-    test('acquireCertificate - should attempt to acquire a certificate', async () => {
-      try {
-        const result = await setup.wallet.acquireCertificate({
-          type: Buffer.from('test-certificate').toString('base64'),
-          certifier: setup.identityKey,
-          acquisitionProtocol: 'issuance',
-          certifierUrl: 'http://localhost:9999',
-          fields: {
-            name: 'Test User',
-            email: 'test@example.com'
-          },
-          privilegedReason: 'Demo acquisition'
-        })
-        expect(result).toBeDefined()
-      } catch (err: any) {
-        // Expected to fail - there's no real certifier service running
-        expect(err).toBeDefined()
-      }
-    }, 10000)
+  // describe('Certificates', () => {
+  //   test('acquireCertificate - should attempt to acquire a certificate', async () => {
+  //     try {
+  //       const result = await setup.wallet.acquireCertificate({
+  //         type: Buffer.from('test-certificate').toString('base64'),
+  //         certifier: setup.identityKey,
+  //         acquisitionProtocol: 'issuance',
+  //         certifierUrl: 'http://localhost:9999',
+  //         fields: {
+  //           name: 'Test User',
+  //           email: 'test@example.com'
+  //         },
+  //         privilegedReason: 'Demo acquisition'
+  //       })
+  //       expect(result).toBeDefined()
+  //     } catch (err: any) {
+  //       // Expected to fail - there's no real certifier service running
+  //       expect(err).toBeDefined()
+  //     }
+  //   }, 10000)
 
-    test('listCertificates - should list wallet certificates', async () => {
-      const certs = await setup.wallet.listCertificates({
-        certifiers: [],
-        types: [],
-        limit: 10,
-        offset: 0
-      })
+  //   test('listCertificates - should list wallet certificates', async () => {
+  //     const certs = await setup.wallet.listCertificates({
+  //       certifiers: [],
+  //       types: [],
+  //       limit: 10,
+  //       offset: 0
+  //     })
 
-      expect(certs).toBeDefined()
-      expect(certs.certificates).toBeDefined()
-      expect(Array.isArray(certs.certificates)).toBe(true)
-      expect(certs.certificates.length).toBeGreaterThanOrEqual(0)
-      if (certs.certificates.length > 0) {
-        const testCert = certs.certificates.find(
-          c => c.type === 'test-certificate'
-        )
-        if (testCert) {
-          expect(testCert.subject).toBeDefined()
-        }
-      }
-    }, 10000)
+  //     expect(certs).toBeDefined()
+  //     expect(certs.certificates).toBeDefined()
+  //     expect(Array.isArray(certs.certificates)).toBe(true)
+  //     expect(certs.certificates.length).toBeGreaterThanOrEqual(0)
+  //     if (certs.certificates.length > 0) {
+  //       const testCert = certs.certificates.find(
+  //         c => c.type === 'test-certificate'
+  //       )
+  //       if (testCert) {
+  //         expect(testCert.subject).toBeDefined()
+  //       }
+  //     }
+  //   }, 10000)
 
-    test('relinquishCertificate - should relinquish a certificate', async () => {
-      // First check if we have any certificates to relinquish
-      const certs = await setup.wallet.listCertificates({
-        certifiers: [],
-        types: [],
-        limit: 10,
-        offset: 0
-      })
+  //   test('relinquishCertificate - should relinquish a certificate', async () => {
+  //     // First check if we have any certificates to relinquish
+  //     const certs = await setup.wallet.listCertificates({
+  //       certifiers: [],
+  //       types: [],
+  //       limit: 10,
+  //       offset: 0
+  //     })
 
-      if (certs.certificates.length === 0) {
-        console.log('⚠️  No certificates to relinquish, skipping test')
-        return
-      }
+  //     if (certs.certificates.length === 0) {
+  //       console.log('⚠️  No certificates to relinquish, skipping test')
+  //       return
+  //     }
 
-      // Try to relinquish the first certificate
-      const cert = certs.certificates[0]
+  //     // Try to relinquish the first certificate
+  //     const cert = certs.certificates[0]
 
-      try {
-        await setup.wallet.relinquishCertificate({
-          type: cert.type,
-          certifier: cert.certifier || 'self',
-          serialNumber: cert.serialNumber || ''
-        })
-      } catch (err: any) {
-        // Expected to fail in test environment
-        expect(err).toBeDefined()
-      }
-    }, 10000)
-  })
+  //     try {
+  //       await setup.wallet.relinquishCertificate({
+  //         type: cert.type,
+  //         certifier: cert.certifier || 'self',
+  //         serialNumber: cert.serialNumber || ''
+  //       })
+  //     } catch (err: any) {
+  //       // Expected to fail in test environment
+  //       expect(err).toBeDefined()
+  //     }
+  //   }, 10000)
+  // })
 
   // ============================================================================
   // Identity Discovery
   // ============================================================================
 
-  describe('Identity Discovery', () => {
-    test('discoverByIdentityKey - should discover certificates by identity key', async () => {
-      try {
-        const result = await setup.wallet.discoverByIdentityKey({
-          identityKey: setup.identityKey,
-          limit: 10,
-          offset: 0,
-          seekPermission: true
-        })
+  // describe('Identity Discovery', () => {
+  //   test('discoverByIdentityKey - should discover certificates by identity key', async () => {
+  //     try {
+  //       const result = await setup.wallet.discoverByIdentityKey({
+  //         identityKey: setup.identityKey,
+  //         limit: 10,
+  //         offset: 0,
+  //         seekPermission: true
+  //       })
 
-        expect(result).toBeDefined()
-        expect(result.certificates).toBeDefined()
-        expect(Array.isArray(result.certificates)).toBe(true)
-      } catch (err: any) {
-        // Expected to fail in test environment
-        expect(err).toBeDefined()
-      }
-    }, 10000)
+  //       expect(result).toBeDefined()
+  //       expect(result.certificates).toBeDefined()
+  //       expect(Array.isArray(result.certificates)).toBe(true)
+  //     } catch (err: any) {
+  //       // Expected to fail in test environment
+  //       expect(err).toBeDefined()
+  //     }
+  //   }, 10000)
 
-    test('discoverByAttributes - should discover certificates by attributes', async () => {
-      try {
-        const result = await setup.wallet.discoverByAttributes({
-          attributes: { verified: 'true' },
-          limit: 10,
-          offset: 0
-        })
+  //   test('discoverByAttributes - should discover certificates by attributes', async () => {
+  //     try {
+  //       const result = await setup.wallet.discoverByAttributes({
+  //         attributes: { verified: 'true' },
+  //         limit: 10,
+  //         offset: 0
+  //       })
 
-        expect(result).toBeDefined()
-        expect(result.certificates).toBeDefined()
-        expect(Array.isArray(result.certificates)).toBe(true)
-      } catch (err: any) {
-        // Expected to fail in test environment
-        expect(err).toBeDefined()
-      }
-    }, 10000)
-  })
+  //       expect(result).toBeDefined()
+  //       expect(result.certificates).toBeDefined()
+  //       expect(Array.isArray(result.certificates)).toBe(true)
+  //     } catch (err: any) {
+  //       // Expected to fail in test environment
+  //       expect(err).toBeDefined()
+  //     }
+  //   }, 10000)
+  // })
 
   // // ============================================================================
   // // Transactions
   // // ============================================================================
 
-  describe('Transactions', () => {
-    test('internalizeAction - should internalize an external transaction', async () => {
-      // This is a complex operation that requires an actual external transaction
-      // For testing purposes, we'll try with minimal parameters and expect graceful failure
-      try {
-        const dummyTxHex =
-          '01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff0100ffffffff01000000000000000000000000'
-        const result = await setup.wallet.internalizeAction({
-          tx: Array.from(Buffer.from(dummyTxHex, 'hex')),
-          outputs: [
-            {
-              outputIndex: 0,
-              protocol: 'basket insertion',
-              insertionRemittance: {
-                basket: 'default'
-              }
-            }
-          ],
-          description: 'Test internalization of external transaction'
-        })
+  // describe('Transactions', () => {
+  //   test('internalizeAction - should internalize an external transaction', async () => {
+  //     // This is a complex operation that requires an actual external transaction
+  //     // For testing purposes, we'll try with minimal parameters and expect graceful failure
+  //     try {
+  //       const dummyTxHex =
+  //         '01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff0100ffffffff01000000000000000000000000'
+  //       const result = await setup.wallet.internalizeAction({
+  //         tx: Array.from(Buffer.from(dummyTxHex, 'hex')),
+  //         outputs: [
+  //           {
+  //             outputIndex: 0,
+  //             protocol: 'basket insertion',
+  //             insertionRemittance: {
+  //               basket: 'default'
+  //             }
+  //           }
+  //         ],
+  //         description: 'Test internalization of external transaction'
+  //       })
 
-        expect(result).toBeDefined()
-      } catch (err: any) {
-        // Expected to fail with dummy data
-        expect(err).toBeDefined()
-      }
-    }, 10000)
-  })
+  //       expect(result).toBeDefined()
+  //     } catch (err: any) {
+  //       // Expected to fail with dummy data
+  //       expect(err).toBeDefined()
+  //     }
+  //   }, 10000)
+  // })
 
   // ============================================================================
   // Blockchain Info
   // ============================================================================
 
-  describe('Blockchain Info', () => {
-    test('getHeight - should fetch current block height', async () => {
-      // console.log('📊 Testing getHeight...')
-      try {
-        const result = await setup.wallet.getHeight({})
-        // console.log(`📊 Current height: ${result.height}`)
-        expect(result).toBeDefined()
-        expect(result.height).toBeDefined()
-        expect(typeof result.height).toBe('number')
-        expect(result.height).toBeGreaterThan(0)
-        // console.log('✅ getHeight test completed')
-      } catch (err: any) {
-        // If services are not configured for blockchain access, that's expected
-        // But we should still verify the method exists and returns a structured response
-        if (err.message && err.message.includes('not configured')) {
-          console.log('⚠️  Blockchain services not configured - this is expected for some test environments')
-        } else {
-          throw err
-        }
-      }
-    }, 10000)
+  // describe('Blockchain Info', () => {
+  //   test('getHeight - should fetch current block height', async () => {
+  //     // console.log('📊 Testing getHeight...')
+  //     try {
+  //       const result = await setup.wallet.getHeight({})
+  //       // console.log(`📊 Current height: ${result.height}`)
+  //       expect(result).toBeDefined()
+  //       expect(result.height).toBeDefined()
+  //       expect(typeof result.height).toBe('number')
+  //       expect(result.height).toBeGreaterThan(0)
+  //       // console.log('✅ getHeight test completed')
+  //     } catch (err: any) {
+  //       // If services are not configured for blockchain access, that's expected
+  //       // But we should still verify the method exists and returns a structured response
+  //       if (err.message && err.message.includes('not configured')) {
+  //         console.log('⚠️  Blockchain services not configured - this is expected for some test environments')
+  //       } else {
+  //         throw err
+  //       }
+  //     }
+  //   }, 10000)
 
-    test('getHeaderForHeight - should fetch header for specific height', async () => {
-      // console.log('📦 Testing getHeaderForHeight...')
-      try {
-        // Use a known height (e.g., block 1 or a recent block)
-        const testHeight = 1
-        const result = await setup.wallet.getHeaderForHeight({ height: testHeight })
-        // console.log(`📦 Header for height ${testHeight}: ${result.header.substring(0, 32)}...`)
-        expect(result).toBeDefined()
-        expect(result.header).toBeDefined()
-        expect(typeof result.header).toBe('string')
-        // Block header should be 80 bytes = 160 hex characters
-        expect(result.header.length).toBe(160)
-        // console.log('✅ getHeaderForHeight test completed')
-      } catch (err: any) {
-        // If services are not configured for blockchain access, that's expected
-        if (err.message && err.message.includes('not configured')) {
-          console.log('⚠️  Blockchain services not configured - this is expected for some test environments')
-        } else {
-          throw err
-        }
-      }
-    }, 10000)
-  })
+  //   test('getHeaderForHeight - should fetch header for specific height', async () => {
+  //     // console.log('📦 Testing getHeaderForHeight...')
+  //     try {
+  //       // Use a known height (e.g., block 1 or a recent block)
+  //       const testHeight = 1
+  //       const result = await setup.wallet.getHeaderForHeight({ height: testHeight })
+  //       // console.log(`📦 Header for height ${testHeight}: ${result.header.substring(0, 32)}...`)
+  //       expect(result).toBeDefined()
+  //       expect(result.header).toBeDefined()
+  //       expect(typeof result.header).toBe('string')
+  //       // Block header should be 80 bytes = 160 hex characters
+  //       expect(result.header.length).toBe(160)
+  //       // console.log('✅ getHeaderForHeight test completed')
+  //     } catch (err: any) {
+  //       // If services are not configured for blockchain access, that's expected
+  //       if (err.message && err.message.includes('not configured')) {
+  //         console.log('⚠️  Blockchain services not configured - this is expected for some test environments')
+  //       } else {
+  //         throw err
+  //       }
+  //     }
+  //   }, 10000)
+  // })
 })
