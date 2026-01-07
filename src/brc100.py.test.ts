@@ -626,6 +626,7 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
               acceptDelayedBroadcast: false
             }
           })
+          console.dir(action, { depth: null })
           await new Promise(resolve => setTimeout(resolve, 2000))
           console.log('Slept for 2 seconds after tx')
         } catch (error: any) {
