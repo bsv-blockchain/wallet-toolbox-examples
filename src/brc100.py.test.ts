@@ -675,23 +675,6 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
                   `${result.txid || 'no-txid'}: ${result.message || 'Unknown error'}`
                 ).join('; ')
                 console.error(`❌ Review action failed with errors: ${errorMessages}`)
-
-                // Try to abort any actions that failed to clean up reserved UTXOs
-                for (const errorResult of errorResults) {
-                  if (errorResult.reference || errorResult.txid) {
-                    try {
-                      const abortRef = errorResult.reference || errorResult.txid
-                      console.log(`🔄 Attempting to abort failed action: ${abortRef}`)
-                      const abortResult = await setup.wallet.abortAction({ reference: abortRef })
-                      console.log(`✅ Abort result for ${abortRef}:`, JSON.stringify(abortResult))
-                    } catch (abortErr: any) {
-                      console.error(`⚠️  Failed to abort action ${errorResult.txid || errorResult.reference}:`, abortErr.message)
-                    }
-                  } else {
-                    console.warn(`⚠️  Cannot abort review action - no reference or txid available:`, errorResult)
-                  }
-                }
-
                 // Use expect().toBe() to fail the test explicitly
                 expect(errorResults.length).toBe(0)
               }
@@ -754,88 +737,88 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
       }
     }, 15000)
     
-    // test('createAction - verify action result structure', async () => {
-    //   // Check balance first
-    //   let balance = 0
-    //   try {
-    //     balance = await setup.wallet.balance()
-    //     // console.log(`💰 Current balance: ${balance} satoshis`)
-    //   } catch (err) {
-    //     console.log('⚠️  Could not check balance - assuming 0')
-    //   }
+    test('createAction - verify action result structure', async () => {
+      // Check balance first
+      let balance = 0
+      try {
+        balance = await setup.wallet.balance()
+        // console.log(`💰 Current balance: ${balance} satoshis`)
+      } catch (err) {
+        console.log('⚠️  Could not check balance - assuming 0')
+      }
 
-    //   if (balance < 10) {
-    //     console.log('⚠️  Skipping structure test - insufficient balance')
-    //     return
-    //   }
+      if (balance < 10) {
+        console.log('⚠️  Skipping structure test - insufficient balance')
+        return
+      }
 
-    //   try {
-    //     const message = 'Structure Test'
-    //     const messageBytes = Buffer.from(message)
-    //     const hexData = messageBytes.toString('hex')
-    //     const length = messageBytes.length
-    //     const lockingScript = `006a${length.toString(16).padStart(2, '0')}${hexData}`
+      try {
+        const message = 'Structure Test'
+        const messageBytes = Buffer.from(message)
+        const hexData = messageBytes.toString('hex')
+        const length = messageBytes.length
+        const lockingScript = `006a${length.toString(16).padStart(2, '0')}${hexData}`
 
-    //     let action
-    //     try {
-    //       action = await setup.wallet.createAction({
-    //         description: `Structure test: ${message}`,
-    //         outputs: [
-    //           {
-    //             lockingScript,
-    //             satoshis: 0,
-    //             outputDescription: 'Test output',
-    //             basket: 'opreturn',
-    //             tags: ['test']
-    //           }
-    //         ],
-    //         labels: ['test:structure'],
-    //         options: {
-    //           noSend: true  // Create signableTransaction for testing
-    //         }
-    //       })
+        let action
+        try {
+          action = await setup.wallet.createAction({
+            description: `Structure test: ${message}`,
+            outputs: [
+              {
+                lockingScript,
+                satoshis: 0,
+                outputDescription: 'Test output',
+                basket: 'opreturn',
+                tags: ['test']
+              }
+            ],
+            labels: ['test:structure'],
+            options: {
+              noSend: true  // Create signableTransaction for testing
+            }
+          })
           
-    //       await new Promise(resolve => setTimeout(resolve, 2000))
-    //       console.log('Slept for 2 seconds after tx')
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          console.log('Slept for 2 seconds after tx')
 
-    //     } catch (err: any) {
-    //       console.error('❌ createAction failed:', err.message)
-    //       throw err
-    //     }
+        } catch (err: any) {
+          console.error('❌ createAction failed:', err.message)
+          throw err
+        }
 
-    //     // console.log(
-    //     //   `✅ Structure test action created with ${action.signableTransaction ? 'signableTransaction' : action.txid ? 'txid' : 'unknown'}`
-    //     // )
-    //     expect(action).toBeDefined()
+        // console.log(
+        //   `✅ Structure test action created with ${action.signableTransaction ? 'signableTransaction' : action.txid ? 'txid' : 'unknown'}`
+        // )
+        expect(action).toBeDefined()
 
-    //     // Verify result structure - either signableTransaction or txid
-    //     if (action.signableTransaction) {
-    //       expect(action.signableTransaction.reference).toBeDefined()
-    //       expect(action.signableTransaction.tx).toBeDefined()
-    //       // Cleanup - abort to release UTXOs (unreserve satoshis)
-    //       const reference = action.signableTransaction.reference
-    //       console.log(`🔄 Aborting action with reference: ${reference}`)
-    //       const abortResult = await setup.wallet.abortAction({
-    //         reference: reference
-    //       })
-    //       console.log(`✅ Abort action result:`, JSON.stringify(abortResult))
-    //       expect(abortResult.aborted).toBe(true)
-    //     } else if (action.txid) {
-    //       // In live mode with auto-signing, expect txid
-    //       expect(typeof action.txid).toBe('string')
-    //       expect(action.txid!.length).toBe(64)
-    //     } else {
-    //       throw new Error('Expected either signableTransaction or txid')
-    //     }
-    //   } catch (err: any) {
-    //     if (
-    //       err.message.includes('Insufficient funds') ||
-    //       err.message.includes('insufficient')
-    //     )
-    //       return
-    //     throw err
-    //   }
-    // }, 15000)
+        // Verify result structure - either signableTransaction or txid
+        if (action.signableTransaction) {
+          expect(action.signableTransaction.reference).toBeDefined()
+          expect(action.signableTransaction.tx).toBeDefined()
+          // Cleanup - abort to release UTXOs (unreserve satoshis)
+          // const reference = action.signableTransaction.reference
+          // console.log(`🔄 Aborting action with reference: ${reference}`)
+          // const abortResult = await setup.wallet.abortAction({
+          //   reference: reference
+          // })
+          // console.log(`✅ Abort action result:`, JSON.stringify(abortResult))
+          // expect(abortResult.aborted).toBe(true)
+        } else if (action.txid) {
+          // In live mode with auto-signing, expect txid
+          expect(typeof action.txid).toBe('string')
+          expect(action.txid!.length).toBe(64)
+        } else {
+          throw new Error('Expected either signableTransaction or txid')
+        }
+      } catch (err: any) {
+        if (
+          err.message.includes('Insufficient funds') ||
+          err.message.includes('insufficient')
+        )
+          return
+        throw err
+      }
+    }, 15000)
 
     // test('listActions - should list recent wallet actions', async () => {
     //   const actions = await setup.wallet.listActions({
