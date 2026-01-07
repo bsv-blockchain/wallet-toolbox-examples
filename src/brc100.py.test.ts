@@ -169,6 +169,7 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
       let balance = 0
       try {
         balance = await setup.wallet.balance()
+        console.log('💰 Balance:', balance)
         expect(typeof balance).toBe('number')
         expect(balance).toBeGreaterThanOrEqual(0)
 
@@ -626,7 +627,7 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
               acceptDelayedBroadcast: false
             }
           })
-          console.dir(action, { depth: null })
+          // console.dir(action, { depth: null })
           await new Promise(resolve => setTimeout(resolve, 2000))
           console.log('Slept for 2 seconds after tx')
         } catch (error: any) {
@@ -775,12 +776,13 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
             ],
             labels: ['test:structure'],
             options: {
-              noSend: true  // Create signableTransaction for testing
+              signAndProcess: false, 
             }
           })
           
-          await new Promise(resolve => setTimeout(resolve, 2000))
-          console.log('Slept for 2 seconds after tx')
+          // console.dir(action, { depth: null })
+          // await new Promise(resolve => setTimeout(resolve, 2000))
+          // console.log('Slept for 2 seconds after tx')
 
         } catch (err: any) {
           console.error('❌ createAction failed:', err.message)
@@ -791,23 +793,27 @@ describe('BRC-100 Wallet Operations (Python Storage Server)', () => {
         //   `✅ Structure test action created with ${action.signableTransaction ? 'signableTransaction' : action.txid ? 'txid' : 'unknown'}`
         // )
         expect(action).toBeDefined()
-
-        // Verify result structure - either signableTransaction or txid
-        if (action.signableTransaction) {
+        // Verify result structure - align with TypeScript behavior:
+        // When noSend: true and transaction is signed, expect txid (not signableTransaction)
+        // When signAndProcess: false, expect signableTransaction (not txid)
+        if (action.txid) {
+          // Transaction was signed - expect txid and tx, but NOT signableTransaction (TypeScript behavior)
+          expect(typeof action.txid).toBe('string')
+          expect(action.txid!.length).toBe(64)
+          expect(action.tx).toBeDefined()
+          expect(action.signableTransaction).toBeUndefined()
+        } else if (action.signableTransaction) {
+          // Transaction was not signed - expect signableTransaction (not txid)
           expect(action.signableTransaction.reference).toBeDefined()
           expect(action.signableTransaction.tx).toBeDefined()
           // Cleanup - abort to release UTXOs (unreserve satoshis)
-          // const reference = action.signableTransaction.reference
-          // console.log(`🔄 Aborting action with reference: ${reference}`)
-          // const abortResult = await setup.wallet.abortAction({
-          //   reference: reference
-          // })
-          // console.log(`✅ Abort action result:`, JSON.stringify(abortResult))
-          // expect(abortResult.aborted).toBe(true)
-        } else if (action.txid) {
-          // In live mode with auto-signing, expect txid
-          expect(typeof action.txid).toBe('string')
-          expect(action.txid!.length).toBe(64)
+          const reference = action.signableTransaction.reference
+          console.log(`🔄 Aborting action with reference: ${reference}`)
+          const abortResult = await setup.wallet.abortAction({
+            reference: reference
+          })
+          console.log(`✅ Abort action result:`, JSON.stringify(abortResult))
+          expect(abortResult).toBe(true)
         } else {
           throw new Error('Expected either signableTransaction or txid')
         }
